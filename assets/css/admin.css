@@ -9,156 +9,156 @@
    Metabox Wrapper
    ========================================================================== */
 .scl-metabox-wrapper {
-    padding: 10px 0;
+  padding: 10px 0;
 }
 
 .scl-field-row {
-    display: flex;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
 }
 
 .scl-field-row:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .scl-field-label {
-    flex: 0 0 200px;
-    font-weight: 600;
-    padding-top: 7px;
+  flex: 0 0 200px;
+  font-weight: 600;
+  padding-top: 7px;
 }
 
 .scl-field-input {
-    flex: 1;
-    min-width: 300px;
+  flex: 1;
+  min-width: 300px;
 }
 
 .scl-field-input .description {
-    color: #666;
-    font-style: italic;
-    margin-top: 5px;
+  color: #666;
+  font-style: italic;
+  margin-top: 5px;
 }
 
 /* ==========================================================================
    Image Field
    ========================================================================== */
 .scl-image-field {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .scl-image-preview {
-    width: 150px;
-    min-height: 100px;
-    background: #f5f5f5;
-    border: 1px dashed #ccc;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+  width: 150px;
+  min-height: 100px;
+  background: #f5f5f5;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .scl-image-preview img {
-    max-width: 100%;
-    max-height: 150px;
-    object-fit: contain;
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
 }
 
 .scl-image-preview:empty::after {
-    content: 'Sin imagen';
-    color: #999;
-    font-size: 12px;
+  content: "Sin imagen";
+  color: #999;
+  font-size: 12px;
 }
 
 /* ==========================================================================
    File Field
    ========================================================================== */
 .scl-file-field {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 
 .scl-file-preview {
-    flex: 1;
+  flex: 1;
 }
 
 .scl-file-preview a {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 8px 12px;
-    background: #f5f5f5;
-    border-radius: 4px;
-    text-decoration: none;
-    color: #333;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #333;
 }
 
 .scl-file-preview a:hover {
-    background: #eee;
+  background: #eee;
 }
 
 /* ==========================================================================
    Responsive
    ========================================================================== */
 @media (max-width: 782px) {
-    .scl-field-row {
-        flex-direction: column;
-    }
-    
-    .scl-field-label {
-        flex: none;
-        margin-bottom: 8px;
-    }
-    
-    .scl-field-input {
-        min-width: 100%;
-    }
+  .scl-field-row {
+    flex-direction: column;
+  }
+
+  .scl-field-label {
+    flex: none;
+    margin-bottom: 8px;
+  }
+
+  .scl-field-input {
+    min-width: 100%;
+  }
 }
 
 /* ==========================================================================
    Settings Page
    ========================================================================== */
 .wrap h2 {
-    margin-top: 30px;
+  margin-top: 30px;
 }
 
 .wrap table.widefat {
-    margin-top: 15px;
+  margin-top: 15px;
 }
 
 .wrap table.widefat code {
-    background: #f5f5f5;
-    padding: 2px 6px;
-    border-radius: 3px;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
 /* ==========================================================================
    Logs Page
    ========================================================================== */
 .wrap .wp-list-table code {
-    background: #e7f3ff;
-    color: #0073aa;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 12px;
+  background: #e7f3ff;
+  color: #0073aa;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
 }
 
 /* ==========================================================================
    Custom Columns
    ========================================================================== */
 .column-scl_logo {
-    width: 70px;
+  width: 70px;
 }
 
 .column-scl_whatsapp {
-    width: 150px;
+  width: 150px;
 }

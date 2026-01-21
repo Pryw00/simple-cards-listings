@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Sistema de logs
  *
@@ -6,14 +7,15 @@
  * @since 1.0.0
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * Clase para gestionar los logs del plugin
  */
-class SCL_Logger {
+class SCL_Logger
+{
 
     /**
      * Nombre de la tabla de logs
@@ -25,19 +27,20 @@ class SCL_Logger {
     /**
      * Inicializar logger
      */
-    public static function init() {
+    public static function init()
+    {
         global $wpdb;
         self::$table_name = $wpdb->prefix . 'scl_logs';
 
         // Hook para registrar acciones
-        add_action( 'save_post_establecimiento', array( __CLASS__, 'log_establecimiento_save' ), 20, 3 );
-        add_action( 'delete_post', array( __CLASS__, 'log_post_delete' ) );
-        add_action( 'created_categoria_establecimiento', array( __CLASS__, 'log_term_created' ), 10, 2 );
-        add_action( 'edited_categoria_establecimiento', array( __CLASS__, 'log_term_edited' ), 10, 2 );
-        add_action( 'delete_categoria_establecimiento', array( __CLASS__, 'log_term_deleted' ), 10, 4 );
-        add_action( 'created_tag_busqueda', array( __CLASS__, 'log_tag_created' ), 10, 2 );
-        add_action( 'edited_tag_busqueda', array( __CLASS__, 'log_tag_edited' ), 10, 2 );
-        add_action( 'delete_tag_busqueda', array( __CLASS__, 'log_tag_deleted' ), 10, 4 );
+        add_action('save_post_establecimiento', array(__CLASS__, 'log_establecimiento_save'), 20, 3);
+        add_action('delete_post', array(__CLASS__, 'log_post_delete'));
+        add_action('created_categoria_establecimiento', array(__CLASS__, 'log_term_created'), 10, 2);
+        add_action('edited_categoria_establecimiento', array(__CLASS__, 'log_term_edited'), 10, 2);
+        add_action('delete_categoria_establecimiento', array(__CLASS__, 'log_term_deleted'), 10, 4);
+        add_action('created_tag_busqueda', array(__CLASS__, 'log_tag_created'), 10, 2);
+        add_action('edited_tag_busqueda', array(__CLASS__, 'log_tag_edited'), 10, 2);
+        add_action('delete_tag_busqueda', array(__CLASS__, 'log_tag_deleted'), 10, 4);
     }
 
     /**
@@ -48,25 +51,26 @@ class SCL_Logger {
      * @param int    $object_id   ID del objeto relacionado.
      * @param string $object_type Tipo de objeto.
      */
-    public static function log( $action, $message, $object_id = 0, $object_type = '' ) {
+    public static function log($action, $message, $object_id = 0, $object_type = '')
+    {
         global $wpdb;
 
         $user_id = get_current_user_id();
         $ip_address = self::get_client_ip();
 
         $data = array(
-            'action'      => sanitize_key( $action ),
-            'message'     => sanitize_text_field( $message ),
+            'action'      => sanitize_key($action),
+            'message'     => sanitize_text_field($message),
             'user_id'     => $user_id,
-            'object_id'   => absint( $object_id ),
-            'object_type' => sanitize_key( $object_type ),
-            'ip_address'  => sanitize_text_field( $ip_address ),
-            'created_at'  => current_time( 'mysql' ),
+            'object_id'   => absint($object_id),
+            'object_type' => sanitize_key($object_type),
+            'ip_address'  => sanitize_text_field($ip_address),
+            'created_at'  => current_time('mysql'),
         );
 
-        $format = array( '%s', '%s', '%d', '%d', '%s', '%s', '%s' );
+        $format = array('%s', '%s', '%d', '%d', '%s', '%s', '%s');
 
-        $wpdb->insert( self::$table_name, $data, $format );
+        $wpdb->insert(self::$table_name, $data, $format);
     }
 
     /**
@@ -74,14 +78,15 @@ class SCL_Logger {
      *
      * @return string
      */
-    private static function get_client_ip() {
+    private static function get_client_ip()
+    {
         $ip = '';
 
-        if ( ! empty( $_SERVER['HTTP_CLIENT_IP'] ) ) {
+        if (! empty($_SERVER['HTTP_CLIENT_IP'])) {
             $ip = $_SERVER['HTTP_CLIENT_IP'];
-        } elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+        } elseif (! empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
             $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-        } elseif ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+        } elseif (! empty($_SERVER['REMOTE_ADDR'])) {
             $ip = $_SERVER['REMOTE_ADDR'];
         }
 
@@ -95,12 +100,13 @@ class SCL_Logger {
      * @param WP_Post $post    Objeto del post.
      * @param bool    $update  Si es actualización.
      */
-    public static function log_establecimiento_save( $post_id, $post, $update ) {
-        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+    public static function log_establecimiento_save($post_id, $post, $update)
+    {
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
         }
 
-        if ( wp_is_post_revision( $post_id ) ) {
+        if (wp_is_post_revision($post_id)) {
             return;
         }
 
@@ -108,16 +114,16 @@ class SCL_Logger {
         $message = $update
             ? sprintf(
                 /* translators: %s: título del establecimiento */
-                __( 'Establecimiento "%s" actualizado', 'simple-cards-listings' ),
+                __('Establecimiento "%s" actualizado', 'simple-cards-listings'),
                 $post->post_title
             )
             : sprintf(
                 /* translators: %s: título del establecimiento */
-                __( 'Establecimiento "%s" creado', 'simple-cards-listings' ),
+                __('Establecimiento "%s" creado', 'simple-cards-listings'),
                 $post->post_title
             );
 
-        self::log( $action, $message, $post_id, 'establecimiento' );
+        self::log($action, $message, $post_id, 'establecimiento');
     }
 
     /**
@@ -125,10 +131,11 @@ class SCL_Logger {
      *
      * @param int $post_id ID del post.
      */
-    public static function log_post_delete( $post_id ) {
-        $post = get_post( $post_id );
-        
-        if ( ! $post || 'establecimiento' !== $post->post_type ) {
+    public static function log_post_delete($post_id)
+    {
+        $post = get_post($post_id);
+
+        if (! $post || 'establecimiento' !== $post->post_type) {
             return;
         }
 
@@ -136,7 +143,7 @@ class SCL_Logger {
             'establecimiento_deleted',
             sprintf(
                 /* translators: %s: título del establecimiento */
-                __( 'Establecimiento "%s" eliminado', 'simple-cards-listings' ),
+                __('Establecimiento "%s" eliminado', 'simple-cards-listings'),
                 $post->post_title
             ),
             $post_id,
@@ -150,10 +157,11 @@ class SCL_Logger {
      * @param int $term_id ID del término.
      * @param int $tt_id   ID de la taxonomía.
      */
-    public static function log_term_created( $term_id, $tt_id ) {
-        $term = get_term( $term_id );
-        
-        if ( ! $term || is_wp_error( $term ) ) {
+    public static function log_term_created($term_id, $tt_id)
+    {
+        $term = get_term($term_id);
+
+        if (! $term || is_wp_error($term)) {
             return;
         }
 
@@ -161,7 +169,7 @@ class SCL_Logger {
             'category_created',
             sprintf(
                 /* translators: %s: nombre de la categoría */
-                __( 'Categoría "%s" creada', 'simple-cards-listings' ),
+                __('Categoría "%s" creada', 'simple-cards-listings'),
                 $term->name
             ),
             $term_id,
@@ -175,10 +183,11 @@ class SCL_Logger {
      * @param int $term_id ID del término.
      * @param int $tt_id   ID de la taxonomía.
      */
-    public static function log_term_edited( $term_id, $tt_id ) {
-        $term = get_term( $term_id );
-        
-        if ( ! $term || is_wp_error( $term ) ) {
+    public static function log_term_edited($term_id, $tt_id)
+    {
+        $term = get_term($term_id);
+
+        if (! $term || is_wp_error($term)) {
             return;
         }
 
@@ -186,7 +195,7 @@ class SCL_Logger {
             'category_updated',
             sprintf(
                 /* translators: %s: nombre de la categoría */
-                __( 'Categoría "%s" actualizada', 'simple-cards-listings' ),
+                __('Categoría "%s" actualizada', 'simple-cards-listings'),
                 $term->name
             ),
             $term_id,
@@ -202,8 +211,9 @@ class SCL_Logger {
      * @param object $deleted_term Término eliminado.
      * @param array  $object_ids   IDs de objetos relacionados.
      */
-    public static function log_term_deleted( $term_id, $tt_id, $deleted_term, $object_ids ) {
-        if ( ! $deleted_term || is_wp_error( $deleted_term ) ) {
+    public static function log_term_deleted($term_id, $tt_id, $deleted_term, $object_ids)
+    {
+        if (! $deleted_term || is_wp_error($deleted_term)) {
             return;
         }
 
@@ -211,7 +221,7 @@ class SCL_Logger {
             'category_deleted',
             sprintf(
                 /* translators: %s: nombre de la categoría */
-                __( 'Categoría "%s" eliminada', 'simple-cards-listings' ),
+                __('Categoría "%s" eliminada', 'simple-cards-listings'),
                 $deleted_term->name
             ),
             $term_id,
@@ -225,10 +235,11 @@ class SCL_Logger {
      * @param int $term_id ID del término.
      * @param int $tt_id   ID de la taxonomía.
      */
-    public static function log_tag_created( $term_id, $tt_id ) {
-        $term = get_term( $term_id );
-        
-        if ( ! $term || is_wp_error( $term ) ) {
+    public static function log_tag_created($term_id, $tt_id)
+    {
+        $term = get_term($term_id);
+
+        if (! $term || is_wp_error($term)) {
             return;
         }
 
@@ -236,7 +247,7 @@ class SCL_Logger {
             'tag_created',
             sprintf(
                 /* translators: %s: nombre del tag */
-                __( 'Tag de búsqueda "%s" creado', 'simple-cards-listings' ),
+                __('Tag de búsqueda "%s" creado', 'simple-cards-listings'),
                 $term->name
             ),
             $term_id,
@@ -250,10 +261,11 @@ class SCL_Logger {
      * @param int $term_id ID del término.
      * @param int $tt_id   ID de la taxonomía.
      */
-    public static function log_tag_edited( $term_id, $tt_id ) {
-        $term = get_term( $term_id );
-        
-        if ( ! $term || is_wp_error( $term ) ) {
+    public static function log_tag_edited($term_id, $tt_id)
+    {
+        $term = get_term($term_id);
+
+        if (! $term || is_wp_error($term)) {
             return;
         }
 
@@ -261,7 +273,7 @@ class SCL_Logger {
             'tag_updated',
             sprintf(
                 /* translators: %s: nombre del tag */
-                __( 'Tag de búsqueda "%s" actualizado', 'simple-cards-listings' ),
+                __('Tag de búsqueda "%s" actualizado', 'simple-cards-listings'),
                 $term->name
             ),
             $term_id,
@@ -277,8 +289,9 @@ class SCL_Logger {
      * @param object $deleted_term Término eliminado.
      * @param array  $object_ids   IDs de objetos relacionados.
      */
-    public static function log_tag_deleted( $term_id, $tt_id, $deleted_term, $object_ids ) {
-        if ( ! $deleted_term || is_wp_error( $deleted_term ) ) {
+    public static function log_tag_deleted($term_id, $tt_id, $deleted_term, $object_ids)
+    {
+        if (! $deleted_term || is_wp_error($deleted_term)) {
             return;
         }
 
@@ -286,7 +299,7 @@ class SCL_Logger {
             'tag_deleted',
             sprintf(
                 /* translators: %s: nombre del tag */
-                __( 'Tag de búsqueda "%s" eliminado', 'simple-cards-listings' ),
+                __('Tag de búsqueda "%s" eliminado', 'simple-cards-listings'),
                 $deleted_term->name
             ),
             $term_id,
@@ -300,7 +313,8 @@ class SCL_Logger {
      * @param array $args Argumentos de consulta.
      * @return array
      */
-    public static function get_logs( $args = array() ) {
+    public static function get_logs($args = array())
+    {
         global $wpdb;
 
         $defaults = array(
@@ -312,39 +326,39 @@ class SCL_Logger {
             'order'    => 'DESC',
         );
 
-        $args = wp_parse_args( $args, $defaults );
+        $args = wp_parse_args($args, $defaults);
 
-        $where = array( '1=1' );
+        $where = array('1=1');
         $values = array();
 
-        if ( ! empty( $args['action'] ) ) {
+        if (! empty($args['action'])) {
             $where[] = 'action = %s';
             $values[] = $args['action'];
         }
 
-        if ( ! empty( $args['user_id'] ) ) {
+        if (! empty($args['user_id'])) {
             $where[] = 'user_id = %d';
-            $values[] = absint( $args['user_id'] );
+            $values[] = absint($args['user_id']);
         }
 
-        $offset = ( absint( $args['page'] ) - 1 ) * absint( $args['per_page'] );
-        $orderby = in_array( $args['orderby'], array( 'id', 'action', 'user_id', 'created_at' ), true ) 
-            ? $args['orderby'] 
+        $offset = (absint($args['page']) - 1) * absint($args['per_page']);
+        $orderby = in_array($args['orderby'], array('id', 'action', 'user_id', 'created_at'), true)
+            ? $args['orderby']
             : 'created_at';
-        $order = strtoupper( $args['order'] ) === 'ASC' ? 'ASC' : 'DESC';
+        $order = strtoupper($args['order']) === 'ASC' ? 'ASC' : 'DESC';
 
-        $sql = "SELECT * FROM " . self::$table_name . " WHERE " . implode( ' AND ', $where );
+        $sql = "SELECT * FROM " . self::$table_name . " WHERE " . implode(' AND ', $where);
         $sql .= " ORDER BY {$orderby} {$order}";
         $sql .= " LIMIT %d OFFSET %d";
 
-        $values[] = absint( $args['per_page'] );
+        $values[] = absint($args['per_page']);
         $values[] = $offset;
 
-        if ( ! empty( $values ) ) {
-            $sql = $wpdb->prepare( $sql, $values );
+        if (! empty($values)) {
+            $sql = $wpdb->prepare($sql, $values);
         }
 
-        return $wpdb->get_results( $sql );
+        return $wpdb->get_results($sql);
     }
 
     /**
@@ -353,29 +367,30 @@ class SCL_Logger {
      * @param array $args Argumentos de consulta.
      * @return int
      */
-    public static function count_logs( $args = array() ) {
+    public static function count_logs($args = array())
+    {
         global $wpdb;
 
-        $where = array( '1=1' );
+        $where = array('1=1');
         $values = array();
 
-        if ( ! empty( $args['action'] ) ) {
+        if (! empty($args['action'])) {
             $where[] = 'action = %s';
             $values[] = $args['action'];
         }
 
-        if ( ! empty( $args['user_id'] ) ) {
+        if (! empty($args['user_id'])) {
             $where[] = 'user_id = %d';
-            $values[] = absint( $args['user_id'] );
+            $values[] = absint($args['user_id']);
         }
 
-        $sql = "SELECT COUNT(*) FROM " . self::$table_name . " WHERE " . implode( ' AND ', $where );
+        $sql = "SELECT COUNT(*) FROM " . self::$table_name . " WHERE " . implode(' AND ', $where);
 
-        if ( ! empty( $values ) ) {
-            $sql = $wpdb->prepare( $sql, $values );
+        if (! empty($values)) {
+            $sql = $wpdb->prepare($sql, $values);
         }
 
-        return (int) $wpdb->get_var( $sql );
+        return (int) $wpdb->get_var($sql);
     }
 
     /**
@@ -384,10 +399,11 @@ class SCL_Logger {
      * @param int $days Días a mantener.
      * @return int Número de registros eliminados.
      */
-    public static function clean_old_logs( $days = 90 ) {
+    public static function clean_old_logs($days = 90)
+    {
         global $wpdb;
 
-        $date = date( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
+        $date = date('Y-m-d H:i:s', strtotime("-{$days} days"));
 
         return $wpdb->query(
             $wpdb->prepare(

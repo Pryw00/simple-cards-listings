@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Manejadores AJAX
  *
@@ -6,82 +7,85 @@
  * @since 1.0.0
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
 /**
  * Clase para gestionar las peticiones AJAX
  */
-class SCL_Ajax_Handlers {
+class SCL_Ajax_Handlers
+{
 
     /**
      * Inicializar handlers
      */
-    public static function init() {
+    public static function init()
+    {
         // Modal de establecimiento
-        add_action( 'wp_ajax_scl_get_establecimiento', array( __CLASS__, 'get_establecimiento' ) );
-        add_action( 'wp_ajax_nopriv_scl_get_establecimiento', array( __CLASS__, 'get_establecimiento' ) );
+        add_action('wp_ajax_scl_get_establecimiento', array(__CLASS__, 'get_establecimiento'));
+        add_action('wp_ajax_nopriv_scl_get_establecimiento', array(__CLASS__, 'get_establecimiento'));
 
         // Búsqueda en tiempo real
-        add_action( 'wp_ajax_scl_search', array( __CLASS__, 'search_establecimientos' ) );
-        add_action( 'wp_ajax_nopriv_scl_search', array( __CLASS__, 'search_establecimientos' ) );
+        add_action('wp_ajax_scl_search', array(__CLASS__, 'search_establecimientos'));
+        add_action('wp_ajax_nopriv_scl_search', array(__CLASS__, 'search_establecimientos'));
 
         // Formulario de solicitud
-        add_action( 'wp_ajax_scl_submit_solicitud', array( __CLASS__, 'submit_solicitud' ) );
+        add_action('wp_ajax_scl_submit_solicitud', array(__CLASS__, 'submit_solicitud'));
 
         // Obtener formulario de edición
-        add_action( 'wp_ajax_scl_get_edit_form', array( __CLASS__, 'get_edit_form' ) );
+        add_action('wp_ajax_scl_get_edit_form', array(__CLASS__, 'get_edit_form'));
 
         // Actualizar establecimiento
-        add_action( 'wp_ajax_scl_update_establecimiento', array( __CLASS__, 'update_establecimiento' ) );
+        add_action('wp_ajax_scl_update_establecimiento', array(__CLASS__, 'update_establecimiento'));
     }
 
     /**
      * Obtener datos de un establecimiento para el modal
      */
-    public static function get_establecimiento() {
-        check_ajax_referer( 'scl_nonce', 'nonce' );
+    public static function get_establecimiento()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
 
-        $post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+        $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
 
-        if ( ! $post_id ) {
-            wp_send_json_error( array( 'message' => __( 'ID de establecimiento no válido.', 'simple-cards-listings' ) ) );
+        if (! $post_id) {
+            wp_send_json_error(array('message' => __('ID de establecimiento no válido.', 'simple-cards-listings')));
         }
 
-        $post = get_post( $post_id );
+        $post = get_post($post_id);
 
-        if ( ! $post || 'establecimiento' !== $post->post_type || 'publish' !== $post->post_status ) {
-            wp_send_json_error( array( 'message' => __( 'Establecimiento no encontrado.', 'simple-cards-listings' ) ) );
+        if (! $post || 'establecimiento' !== $post->post_type || 'publish' !== $post->post_status) {
+            wp_send_json_error(array('message' => __('Establecimiento no encontrado.', 'simple-cards-listings')));
         }
 
         // Obtener datos
-        $logo_id = SCL_Metaboxes::get_meta( $post_id, 'logo' );
-        $imagen_id = SCL_Metaboxes::get_meta( $post_id, 'imagen_establecimiento' );
-        $menu_pdf_id = SCL_Metaboxes::get_meta( $post_id, 'menu_pdf' );
+        $logo_id = SCL_Metaboxes::get_meta($post_id, 'logo');
+        $imagen_id = SCL_Metaboxes::get_meta($post_id, 'imagen_establecimiento');
+        $menu_pdf_id = SCL_Metaboxes::get_meta($post_id, 'menu_pdf');
 
         $data = array(
             'id'           => $post_id,
             'title'        => $post->post_title,
-            'description'  => apply_filters( 'the_content', $post->post_content ),
+            'description'  => apply_filters('the_content', $post->post_content),
             'excerpt'      => $post->post_excerpt,
-            'logo_url'     => $logo_id ? wp_get_attachment_image_url( $logo_id, 'medium' ) : '',
-            'imagen_url'   => $imagen_id ? wp_get_attachment_image_url( $imagen_id, 'large' ) : '',
-            'menu_pdf_url' => $menu_pdf_id ? wp_get_attachment_url( $menu_pdf_id ) : '',
-            'menu_pdf_name'=> SCL_Metaboxes::get_meta( $post_id, 'menu_pdf_name' ) ?: __( 'Menu', 'simple-cards-listings' ),
-            'whatsapp'     => SCL_Metaboxes::get_meta( $post_id, 'whatsapp' ),
-            'instagram'    => SCL_Metaboxes::get_meta( $post_id, 'instagram' ),
-            'tiktok'       => SCL_Metaboxes::get_meta( $post_id, 'tiktok' ),
-            'facebook'     => SCL_Metaboxes::get_meta( $post_id, 'facebook' ),
-            'website'      => SCL_Metaboxes::get_meta( $post_id, 'website' ),
-            'direccion'    => SCL_Metaboxes::get_meta( $post_id, 'direccion' ),
-            'google_maps'  => SCL_Metaboxes::get_meta( $post_id, 'google_maps_url' ),
+            'logo_url'     => $logo_id ? wp_get_attachment_image_url($logo_id, 'medium') : '',
+            'imagen_url'   => $imagen_id ? wp_get_attachment_image_url($imagen_id, 'large') : '',
+            'menu_pdf_url' => $menu_pdf_id ? wp_get_attachment_url($menu_pdf_id) : '',
+            'menu_pdf_name' => SCL_Metaboxes::get_meta($post_id, 'menu_pdf_name') ?: __('Menu', 'simple-cards-listings'),
+            'whatsapp'     => SCL_Metaboxes::get_meta($post_id, 'whatsapp'),
+            'instagram'    => SCL_Metaboxes::get_meta($post_id, 'instagram'),
+            'tiktok'       => SCL_Metaboxes::get_meta($post_id, 'tiktok'),
+            'facebook'     => SCL_Metaboxes::get_meta($post_id, 'facebook'),
+            'website'      => SCL_Metaboxes::get_meta($post_id, 'website'),
+            'direccion'    => SCL_Metaboxes::get_meta($post_id, 'direccion'),
+            'google_maps'  => SCL_Metaboxes::get_meta($post_id, 'google_maps_url'),
         );
 
         // Renderizar HTML del modal
-        $html = self::render_modal_content( $data );
+        $html = self::render_modal_content($data);
 
-        wp_send_json_success( array( 'html' => $html ) );
+        wp_send_json_success(array('html' => $html));
     }
 
     /**
@@ -90,39 +94,40 @@ class SCL_Ajax_Handlers {
      * @param array $data Datos del establecimiento.
      * @return string
      */
-    private static function render_modal_content( $data ) {
+    private static function render_modal_content($data)
+    {
         ob_start();
-        ?>
+?>
         <div class="scl-modal-establecimiento">
             <div class="scl-modal-left">
-                <h2 class="scl-modal-title"><?php echo esc_html( $data['title'] ); ?></h2>
-                
-                <?php if ( ! empty( $data['description'] ) ) : ?>
+                <h2 class="scl-modal-title"><?php echo esc_html($data['title']); ?></h2>
+
+                <?php if (! empty($data['description'])) : ?>
                     <div class="scl-modal-description">
-                        <?php echo wp_kses_post( $data['description'] ); ?>
+                        <?php echo wp_kses_post($data['description']); ?>
                     </div>
                 <?php endif; ?>
 
                 <!-- Redes sociales -->
                 <div class="scl-modal-social">
-                    <?php if ( ! empty( $data['tiktok'] ) ) : ?>
-                        <a href="<?php echo esc_url( $data['tiktok'] ); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="TikTok">
+                    <?php if (! empty($data['tiktok'])) : ?>
+                        <a href="<?php echo esc_url($data['tiktok']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="TikTok">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
                             </svg>
                         </a>
                     <?php endif; ?>
 
-                    <?php if ( ! empty( $data['facebook'] ) ) : ?>
-                        <a href="<?php echo esc_url( $data['facebook'] ); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="Facebook">
+                    <?php if (! empty($data['facebook'])) : ?>
+                        <a href="<?php echo esc_url($data['facebook']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="Facebook">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                             </svg>
                         </a>
                     <?php endif; ?>
 
-                    <?php if ( ! empty( $data['instagram'] ) ) : ?>
-                        <a href="<?php echo esc_url( $data['instagram'] ); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="Instagram">
+                    <?php if (! empty($data['instagram'])) : ?>
+                        <a href="<?php echo esc_url($data['instagram']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="Instagram">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                                 <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
@@ -134,64 +139,65 @@ class SCL_Ajax_Handlers {
 
                 <!-- Botones de acción -->
                 <div class="scl-modal-actions">
-                    <?php if ( ! empty( $data['whatsapp'] ) ) : 
-                        $whatsapp_number = preg_replace( '/[^0-9]/', '', $data['whatsapp'] );
+                    <?php if (! empty($data['whatsapp'])) :
+                        $whatsapp_number = preg_replace('/[^0-9]/', '', $data['whatsapp']);
                     ?>
-                        <a href="https://wa.me/<?php echo esc_attr( $whatsapp_number ); ?>" target="_blank" rel="noopener" class="scl-action-btn scl-btn-whatsapp">
+                        <a href="https://wa.me/<?php echo esc_attr($whatsapp_number); ?>" target="_blank" rel="noopener" class="scl-action-btn scl-btn-whatsapp">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                             </svg>
-                            <?php esc_html_e( 'WhatsApp', 'simple-cards-listings' ); ?>
+                            <?php esc_html_e('WhatsApp', 'simple-cards-listings'); ?>
                         </a>
                     <?php endif; ?>
 
-                    <?php if ( ! empty( $data['google_maps'] ) ) : ?>
-                        <a href="<?php echo esc_url( $data['google_maps'] ); ?>" target="_blank" rel="noopener" class="scl-action-btn scl-btn-location">
+                    <?php if (! empty($data['google_maps'])) : ?>
+                        <a href="<?php echo esc_url($data['google_maps']); ?>" target="_blank" rel="noopener" class="scl-action-btn scl-btn-location">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                                 <circle cx="12" cy="10" r="3"></circle>
                             </svg>
-                            <?php esc_html_e( 'Ubicación', 'simple-cards-listings' ); ?>
+                            <?php esc_html_e('Ubicación', 'simple-cards-listings'); ?>
                         </a>
                     <?php endif; ?>
 
-                    <?php if ( ! empty( $data['menu_pdf_url'] ) ) : ?>
-                        <a href="<?php echo esc_url( $data['menu_pdf_url'] ); ?>" target="_blank" rel="noopener" class="scl-action-btn scl-btn-menu">
+                    <?php if (! empty($data['menu_pdf_url'])) : ?>
+                        <a href="<?php echo esc_url($data['menu_pdf_url']); ?>" target="_blank" rel="noopener" class="scl-action-btn scl-btn-menu">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
                             </svg>
-                            <?php echo esc_html( $data['menu_pdf_name'] ); ?>
+                            <?php echo esc_html($data['menu_pdf_name']); ?>
                         </a>
                     <?php endif; ?>
                 </div>
             </div>
 
             <div class="scl-modal-right">
-                <?php if ( ! empty( $data['imagen_url'] ) ) : ?>
+                <?php if (! empty($data['imagen_url'])) : ?>
                     <div class="scl-modal-image">
-                        <img src="<?php echo esc_url( $data['imagen_url'] ); ?>" alt="<?php echo esc_attr( $data['title'] ); ?>">
+                        <img src="<?php echo esc_url($data['imagen_url']); ?>" alt="<?php echo esc_attr($data['title']); ?>">
                     </div>
-                <?php elseif ( ! empty( $data['logo_url'] ) ) : ?>
+                <?php elseif (! empty($data['logo_url'])) : ?>
                     <div class="scl-modal-image">
-                        <img src="<?php echo esc_url( $data['logo_url'] ); ?>" alt="<?php echo esc_attr( $data['title'] ); ?>">
+                        <img src="<?php echo esc_url($data['logo_url']); ?>" alt="<?php echo esc_attr($data['title']); ?>">
                     </div>
                 <?php endif; ?>
             </div>
         </div>
-        <?php
+    <?php
         return ob_get_clean();
     }
 
     /**
      * Búsqueda de establecimientos
      */
-    public static function search_establecimientos() {
-        check_ajax_referer( 'scl_nonce', 'nonce' );
+    public static function search_establecimientos()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
 
-        $term = isset( $_POST['term'] ) ? sanitize_text_field( $_POST['term'] ) : '';
+        $term = isset($_POST['term']) ? sanitize_text_field($_POST['term']) : '';
 
-        if ( empty( $term ) ) {
+        if (empty($term)) {
             // Retornar todos si no hay término
             $args = array(
                 'post_type'      => 'establecimiento',
@@ -211,82 +217,83 @@ class SCL_Ajax_Handlers {
             );
         }
 
-        $query = new WP_Query( $args );
+        $query = new WP_Query($args);
         $results = array();
 
-        if ( $query->have_posts() ) {
-            while ( $query->have_posts() ) {
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
                 $query->the_post();
                 $post_id = get_the_ID();
                 $results[] = array(
                     'id'   => $post_id,
-                    'html' => SCL_Shortcodes::render_card_item( $post_id ),
+                    'html' => SCL_Shortcodes::render_card_item($post_id),
                 );
             }
             wp_reset_postdata();
         }
 
-        wp_send_json_success( array( 'items' => $results ) );
+        wp_send_json_success(array('items' => $results));
     }
 
     /**
      * Procesar solicitud de nuevo establecimiento
      */
-    public static function submit_solicitud() {
-        check_ajax_referer( 'scl_solicitud_nonce', 'scl_solicitud_nonce' );
+    public static function submit_solicitud()
+    {
+        check_ajax_referer('scl_solicitud_nonce', 'scl_solicitud_nonce');
 
-        if ( ! is_user_logged_in() ) {
-            wp_send_json_error( array( 'message' => __( 'Debes iniciar sesión.', 'simple-cards-listings' ) ) );
+        if (! is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Debes iniciar sesión.', 'simple-cards-listings')));
         }
 
         // Validar campos requeridos
-        $required_fields = array( 'nombre', 'descripcion', 'categoria', 'direccion' );
-        foreach ( $required_fields as $field ) {
-            if ( empty( $_POST[ $field ] ) ) {
-                wp_send_json_error( array( 
-                    'message' => sprintf( 
+        $required_fields = array('nombre', 'descripcion', 'categoria', 'direccion');
+        foreach ($required_fields as $field) {
+            if (empty($_POST[$field])) {
+                wp_send_json_error(array(
+                    'message' => sprintf(
                         /* translators: %s: nombre del campo */
-                        __( 'El campo %s es requerido.', 'simple-cards-listings' ), 
-                        $field 
-                    ) 
-                ) );
+                        __('El campo %s es requerido.', 'simple-cards-listings'),
+                        $field
+                    )
+                ));
             }
         }
 
         // Validar términos
-        if ( empty( $_POST['terminos'] ) ) {
-            wp_send_json_error( array( 'message' => __( 'Debes aceptar los términos y condiciones.', 'simple-cards-listings' ) ) );
+        if (empty($_POST['terminos'])) {
+            wp_send_json_error(array('message' => __('Debes aceptar los términos y condiciones.', 'simple-cards-listings')));
         }
 
         // Validar y subir logo
-        if ( empty( $_FILES['logo'] ) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK ) {
-            wp_send_json_error( array( 'message' => __( 'Debes subir un logo.', 'simple-cards-listings' ) ) );
+        if (empty($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
+            wp_send_json_error(array('message' => __('Debes subir un logo.', 'simple-cards-listings')));
         }
 
         // Crear post como borrador pendiente
         $post_data = array(
-            'post_title'   => sanitize_text_field( $_POST['nombre'] ),
-            'post_content' => wp_kses_post( $_POST['descripcion'] ),
+            'post_title'   => sanitize_text_field($_POST['nombre']),
+            'post_content' => wp_kses_post($_POST['descripcion']),
             'post_type'    => 'establecimiento',
             'post_status'  => 'pending',
             'post_author'  => get_current_user_id(),
         );
 
-        $post_id = wp_insert_post( $post_data );
+        $post_id = wp_insert_post($post_data);
 
-        if ( is_wp_error( $post_id ) ) {
-            wp_send_json_error( array( 'message' => $post_id->get_error_message() ) );
+        if (is_wp_error($post_id)) {
+            wp_send_json_error(array('message' => $post_id->get_error_message()));
         }
 
         // Asignar categoría
-        if ( ! empty( $_POST['categoria'] ) ) {
-            wp_set_object_terms( $post_id, array( absint( $_POST['categoria'] ) ), 'categoria_establecimiento' );
+        if (! empty($_POST['categoria'])) {
+            wp_set_object_terms($post_id, array(absint($_POST['categoria'])), 'categoria_establecimiento');
         }
 
         // Asignar tags
-        if ( ! empty( $_POST['tags'] ) && is_array( $_POST['tags'] ) ) {
-            $tag_ids = array_map( 'absint', $_POST['tags'] );
-            wp_set_object_terms( $post_id, $tag_ids, 'tag_busqueda' );
+        if (! empty($_POST['tags']) && is_array($_POST['tags'])) {
+            $tag_ids = array_map('absint', $_POST['tags']);
+            wp_set_object_terms($post_id, $tag_ids, 'tag_busqueda');
         }
 
         // Subir archivos
@@ -295,24 +302,24 @@ class SCL_Ajax_Handlers {
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
         // Logo
-        $logo_id = media_handle_upload( 'logo', $post_id );
-        if ( ! is_wp_error( $logo_id ) ) {
-            update_post_meta( $post_id, '_scl_logo', $logo_id );
+        $logo_id = media_handle_upload('logo', $post_id);
+        if (! is_wp_error($logo_id)) {
+            update_post_meta($post_id, '_scl_logo', $logo_id);
         }
 
         // Imagen del establecimiento
-        if ( ! empty( $_FILES['imagen_establecimiento'] ) && $_FILES['imagen_establecimiento']['error'] === UPLOAD_ERR_OK ) {
-            $imagen_id = media_handle_upload( 'imagen_establecimiento', $post_id );
-            if ( ! is_wp_error( $imagen_id ) ) {
-                update_post_meta( $post_id, '_scl_imagen_establecimiento', $imagen_id );
+        if (! empty($_FILES['imagen_establecimiento']) && $_FILES['imagen_establecimiento']['error'] === UPLOAD_ERR_OK) {
+            $imagen_id = media_handle_upload('imagen_establecimiento', $post_id);
+            if (! is_wp_error($imagen_id)) {
+                update_post_meta($post_id, '_scl_imagen_establecimiento', $imagen_id);
             }
         }
 
         // PDF del menú
-        if ( ! empty( $_FILES['menu_pdf'] ) && $_FILES['menu_pdf']['error'] === UPLOAD_ERR_OK ) {
-            $pdf_id = media_handle_upload( 'menu_pdf', $post_id );
-            if ( ! is_wp_error( $pdf_id ) ) {
-                update_post_meta( $post_id, '_scl_menu_pdf', $pdf_id );
+        if (! empty($_FILES['menu_pdf']) && $_FILES['menu_pdf']['error'] === UPLOAD_ERR_OK) {
+            $pdf_id = media_handle_upload('menu_pdf', $post_id);
+            if (! is_wp_error($pdf_id)) {
+                update_post_meta($post_id, '_scl_menu_pdf', $pdf_id);
             }
         }
 
@@ -328,20 +335,20 @@ class SCL_Ajax_Handlers {
             'google_maps_url' => 'url',
         );
 
-        foreach ( $meta_fields as $field => $type ) {
-            if ( isset( $_POST[ $field ] ) ) {
+        foreach ($meta_fields as $field => $type) {
+            if (isset($_POST[$field])) {
                 $value = '';
-                switch ( $type ) {
+                switch ($type) {
                     case 'url':
-                        $value = esc_url_raw( $_POST[ $field ] );
+                        $value = esc_url_raw($_POST[$field]);
                         break;
                     case 'textarea':
-                        $value = sanitize_textarea_field( $_POST[ $field ] );
+                        $value = sanitize_textarea_field($_POST[$field]);
                         break;
                     default:
-                        $value = sanitize_text_field( $_POST[ $field ] );
+                        $value = sanitize_text_field($_POST[$field]);
                 }
-                update_post_meta( $post_id, '_scl_' . $field, $value );
+                update_post_meta($post_id, '_scl_' . $field, $value);
             }
         }
 
@@ -350,257 +357,260 @@ class SCL_Ajax_Handlers {
             'establecimiento_submitted',
             sprintf(
                 /* translators: %s: título del establecimiento */
-                __( 'Nueva solicitud de establecimiento: "%s"', 'simple-cards-listings' ),
-                sanitize_text_field( $_POST['nombre'] )
+                __('Nueva solicitud de establecimiento: "%s"', 'simple-cards-listings'),
+                sanitize_text_field($_POST['nombre'])
             ),
             $post_id,
             'establecimiento'
         );
 
         // Enviar notificación al admin
-        SCL_Notifications::notify_new_submission( $post_id );
+        SCL_Notifications::notify_new_submission($post_id);
 
-        wp_send_json_success( array( 
-            'message' => __( 'Tu solicitud ha sido enviada y está pendiente de aprobación.', 'simple-cards-listings' ),
+        wp_send_json_success(array(
+            'message' => __('Tu solicitud ha sido enviada y está pendiente de aprobación.', 'simple-cards-listings'),
             'post_id' => $post_id,
-        ) );
+        ));
     }
 
     /**
      * Obtener formulario de edición
      */
-    public static function get_edit_form() {
-        check_ajax_referer( 'scl_nonce', 'nonce' );
+    public static function get_edit_form()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
 
-        if ( ! is_user_logged_in() ) {
-            wp_send_json_error( array( 'message' => __( 'Debes iniciar sesión.', 'simple-cards-listings' ) ) );
+        if (! is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Debes iniciar sesión.', 'simple-cards-listings')));
         }
 
-        $post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+        $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
 
-        if ( ! $post_id ) {
-            wp_send_json_error( array( 'message' => __( 'ID no válido.', 'simple-cards-listings' ) ) );
+        if (! $post_id) {
+            wp_send_json_error(array('message' => __('ID no válido.', 'simple-cards-listings')));
         }
 
         // Verificar permisos
-        if ( ! SCL_Permissions::can_edit( $post_id ) ) {
-            wp_send_json_error( array( 'message' => __( 'No tienes permiso para editar este establecimiento.', 'simple-cards-listings' ) ) );
+        if (! SCL_Permissions::can_edit($post_id)) {
+            wp_send_json_error(array('message' => __('No tienes permiso para editar este establecimiento.', 'simple-cards-listings')));
         }
 
-        $post = get_post( $post_id );
+        $post = get_post($post_id);
 
         // Obtener datos
         $data = array(
             'id'              => $post_id,
             'title'           => $post->post_title,
             'description'     => $post->post_content,
-            'logo_id'         => SCL_Metaboxes::get_meta( $post_id, 'logo' ),
-            'imagen_id'       => SCL_Metaboxes::get_meta( $post_id, 'imagen_establecimiento' ),
-            'menu_pdf_id'     => SCL_Metaboxes::get_meta( $post_id, 'menu_pdf' ),
-            'menu_pdf_name'   => SCL_Metaboxes::get_meta( $post_id, 'menu_pdf_name' ),
-            'whatsapp'        => SCL_Metaboxes::get_meta( $post_id, 'whatsapp' ),
-            'instagram'       => SCL_Metaboxes::get_meta( $post_id, 'instagram' ),
-            'tiktok'          => SCL_Metaboxes::get_meta( $post_id, 'tiktok' ),
-            'facebook'        => SCL_Metaboxes::get_meta( $post_id, 'facebook' ),
-            'website'         => SCL_Metaboxes::get_meta( $post_id, 'website' ),
-            'direccion'       => SCL_Metaboxes::get_meta( $post_id, 'direccion' ),
-            'google_maps_url' => SCL_Metaboxes::get_meta( $post_id, 'google_maps_url' ),
+            'logo_id'         => SCL_Metaboxes::get_meta($post_id, 'logo'),
+            'imagen_id'       => SCL_Metaboxes::get_meta($post_id, 'imagen_establecimiento'),
+            'menu_pdf_id'     => SCL_Metaboxes::get_meta($post_id, 'menu_pdf'),
+            'menu_pdf_name'   => SCL_Metaboxes::get_meta($post_id, 'menu_pdf_name'),
+            'whatsapp'        => SCL_Metaboxes::get_meta($post_id, 'whatsapp'),
+            'instagram'       => SCL_Metaboxes::get_meta($post_id, 'instagram'),
+            'tiktok'          => SCL_Metaboxes::get_meta($post_id, 'tiktok'),
+            'facebook'        => SCL_Metaboxes::get_meta($post_id, 'facebook'),
+            'website'         => SCL_Metaboxes::get_meta($post_id, 'website'),
+            'direccion'       => SCL_Metaboxes::get_meta($post_id, 'direccion'),
+            'google_maps_url' => SCL_Metaboxes::get_meta($post_id, 'google_maps_url'),
         );
 
         // Categorías y tags
-        $categorias = get_terms( array( 'taxonomy' => 'categoria_establecimiento', 'hide_empty' => false ) );
-        $tags = get_terms( array( 'taxonomy' => 'tag_busqueda', 'hide_empty' => false ) );
-        $selected_cats = wp_get_post_terms( $post_id, 'categoria_establecimiento', array( 'fields' => 'ids' ) );
-        $selected_tags = wp_get_post_terms( $post_id, 'tag_busqueda', array( 'fields' => 'ids' ) );
+        $categorias = get_terms(array('taxonomy' => 'categoria_establecimiento', 'hide_empty' => false));
+        $tags = get_terms(array('taxonomy' => 'tag_busqueda', 'hide_empty' => false));
+        $selected_cats = wp_get_post_terms($post_id, 'categoria_establecimiento', array('fields' => 'ids'));
+        $selected_tags = wp_get_post_terms($post_id, 'tag_busqueda', array('fields' => 'ids'));
 
-        $html = self::render_edit_form( $data, $categorias, $tags, $selected_cats, $selected_tags );
+        $html = self::render_edit_form($data, $categorias, $tags, $selected_cats, $selected_tags);
 
-        wp_send_json_success( array( 'html' => $html ) );
+        wp_send_json_success(array('html' => $html));
     }
 
     /**
      * Renderizar formulario de edición
      */
-    private static function render_edit_form( $data, $categorias, $tags, $selected_cats, $selected_tags ) {
-        $logo_url = $data['logo_id'] ? wp_get_attachment_image_url( $data['logo_id'], 'thumbnail' ) : '';
-        $imagen_url = $data['imagen_id'] ? wp_get_attachment_image_url( $data['imagen_id'], 'thumbnail' ) : '';
-        $pdf_url = $data['menu_pdf_id'] ? wp_get_attachment_url( $data['menu_pdf_id'] ) : '';
+    private static function render_edit_form($data, $categorias, $tags, $selected_cats, $selected_tags)
+    {
+        $logo_url = $data['logo_id'] ? wp_get_attachment_image_url($data['logo_id'], 'thumbnail') : '';
+        $imagen_url = $data['imagen_id'] ? wp_get_attachment_image_url($data['imagen_id'], 'thumbnail') : '';
+        $pdf_url = $data['menu_pdf_id'] ? wp_get_attachment_url($data['menu_pdf_id']) : '';
 
         ob_start();
-        ?>
-        <h3><?php esc_html_e( 'Editar establecimiento', 'simple-cards-listings' ); ?></h3>
-        
+    ?>
+        <h3><?php esc_html_e('Editar establecimiento', 'simple-cards-listings'); ?></h3>
+
         <form id="scl-edit-form" class="scl-form" enctype="multipart/form-data">
-            <?php wp_nonce_field( 'scl_edit_nonce', 'scl_edit_nonce' ); ?>
-            <input type="hidden" name="post_id" value="<?php echo esc_attr( $data['id'] ); ?>">
-            
+            <?php wp_nonce_field('scl_edit_nonce', 'scl_edit_nonce'); ?>
+            <input type="hidden" name="post_id" value="<?php echo esc_attr($data['id']); ?>">
+
             <div class="scl-form-row">
-                <label for="scl-edit-nombre"><?php esc_html_e( 'Nombre del establecimiento *', 'simple-cards-listings' ); ?></label>
-                <input type="text" id="scl-edit-nombre" name="nombre" value="<?php echo esc_attr( $data['title'] ); ?>" required>
+                <label for="scl-edit-nombre"><?php esc_html_e('Nombre del establecimiento *', 'simple-cards-listings'); ?></label>
+                <input type="text" id="scl-edit-nombre" name="nombre" value="<?php echo esc_attr($data['title']); ?>" required>
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-descripcion"><?php esc_html_e( 'Descripción *', 'simple-cards-listings' ); ?></label>
-                <textarea id="scl-edit-descripcion" name="descripcion" rows="4" required><?php echo esc_textarea( $data['description'] ); ?></textarea>
+                <label for="scl-edit-descripcion"><?php esc_html_e('Descripción *', 'simple-cards-listings'); ?></label>
+                <textarea id="scl-edit-descripcion" name="descripcion" rows="4" required><?php echo esc_textarea($data['description']); ?></textarea>
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-categoria"><?php esc_html_e( 'Categoría *', 'simple-cards-listings' ); ?></label>
+                <label for="scl-edit-categoria"><?php esc_html_e('Categoría *', 'simple-cards-listings'); ?></label>
                 <select id="scl-edit-categoria" name="categoria" required>
-                    <option value=""><?php esc_html_e( 'Seleccionar categoría', 'simple-cards-listings' ); ?></option>
-                    <?php foreach ( $categorias as $cat ) : ?>
-                        <option value="<?php echo esc_attr( $cat->term_id ); ?>" <?php selected( in_array( $cat->term_id, $selected_cats ) ); ?>>
-                            <?php echo esc_html( $cat->name ); ?>
+                    <option value=""><?php esc_html_e('Seleccionar categoría', 'simple-cards-listings'); ?></option>
+                    <?php foreach ($categorias as $cat) : ?>
+                        <option value="<?php echo esc_attr($cat->term_id); ?>" <?php selected(in_array($cat->term_id, $selected_cats)); ?>>
+                            <?php echo esc_html($cat->name); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
             <div class="scl-form-row">
-                <label><?php esc_html_e( 'Tags de búsqueda', 'simple-cards-listings' ); ?></label>
+                <label><?php esc_html_e('Tags de búsqueda', 'simple-cards-listings'); ?></label>
                 <div class="scl-checkbox-group">
-                    <?php foreach ( $tags as $tag ) : ?>
+                    <?php foreach ($tags as $tag) : ?>
                         <label class="scl-checkbox-label">
-                            <input type="checkbox" name="tags[]" value="<?php echo esc_attr( $tag->term_id ); ?>" 
-                                <?php checked( in_array( $tag->term_id, $selected_tags ) ); ?>>
-                            <?php echo esc_html( $tag->name ); ?>
+                            <input type="checkbox" name="tags[]" value="<?php echo esc_attr($tag->term_id); ?>"
+                                <?php checked(in_array($tag->term_id, $selected_tags)); ?>>
+                            <?php echo esc_html($tag->name); ?>
                         </label>
                     <?php endforeach; ?>
                 </div>
             </div>
 
             <div class="scl-form-row">
-                <label><?php esc_html_e( 'Logo actual', 'simple-cards-listings' ); ?></label>
-                <?php if ( $logo_url ) : ?>
-                    <img src="<?php echo esc_url( $logo_url ); ?>" alt="" style="max-width: 100px; display: block; margin-bottom: 10px;">
+                <label><?php esc_html_e('Logo actual', 'simple-cards-listings'); ?></label>
+                <?php if ($logo_url) : ?>
+                    <img src="<?php echo esc_url($logo_url); ?>" alt="" style="max-width: 100px; display: block; margin-bottom: 10px;">
                 <?php endif; ?>
-                <label for="scl-edit-logo"><?php esc_html_e( 'Cambiar logo', 'simple-cards-listings' ); ?></label>
+                <label for="scl-edit-logo"><?php esc_html_e('Cambiar logo', 'simple-cards-listings'); ?></label>
                 <input type="file" id="scl-edit-logo" name="logo" accept="image/*">
             </div>
 
             <div class="scl-form-row">
-                <label><?php esc_html_e( 'Imagen actual', 'simple-cards-listings' ); ?></label>
-                <?php if ( $imagen_url ) : ?>
-                    <img src="<?php echo esc_url( $imagen_url ); ?>" alt="" style="max-width: 100px; display: block; margin-bottom: 10px;">
+                <label><?php esc_html_e('Imagen actual', 'simple-cards-listings'); ?></label>
+                <?php if ($imagen_url) : ?>
+                    <img src="<?php echo esc_url($imagen_url); ?>" alt="" style="max-width: 100px; display: block; margin-bottom: 10px;">
                 <?php endif; ?>
-                <label for="scl-edit-imagen"><?php esc_html_e( 'Cambiar imagen', 'simple-cards-listings' ); ?></label>
+                <label for="scl-edit-imagen"><?php esc_html_e('Cambiar imagen', 'simple-cards-listings'); ?></label>
                 <input type="file" id="scl-edit-imagen" name="imagen_establecimiento" accept="image/*">
             </div>
 
             <div class="scl-form-row">
-                <label><?php esc_html_e( 'PDF actual', 'simple-cards-listings' ); ?></label>
-                <?php if ( $pdf_url ) : ?>
-                    <a href="<?php echo esc_url( $pdf_url ); ?>" target="_blank"><?php esc_html_e( 'Ver PDF actual', 'simple-cards-listings' ); ?></a>
+                <label><?php esc_html_e('PDF actual', 'simple-cards-listings'); ?></label>
+                <?php if ($pdf_url) : ?>
+                    <a href="<?php echo esc_url($pdf_url); ?>" target="_blank"><?php esc_html_e('Ver PDF actual', 'simple-cards-listings'); ?></a>
                 <?php endif; ?>
-                <label for="scl-edit-menu-pdf"><?php esc_html_e( 'Cambiar PDF', 'simple-cards-listings' ); ?></label>
+                <label for="scl-edit-menu-pdf"><?php esc_html_e('Cambiar PDF', 'simple-cards-listings'); ?></label>
                 <input type="file" id="scl-edit-menu-pdf" name="menu_pdf" accept=".pdf">
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-menu-pdf-name"><?php esc_html_e( 'Nombre del PDF', 'simple-cards-listings' ); ?></label>
-                <input type="text" id="scl-edit-menu-pdf-name" name="menu_pdf_name" value="<?php echo esc_attr( $data['menu_pdf_name'] ); ?>">
+                <label for="scl-edit-menu-pdf-name"><?php esc_html_e('Nombre del PDF', 'simple-cards-listings'); ?></label>
+                <input type="text" id="scl-edit-menu-pdf-name" name="menu_pdf_name" value="<?php echo esc_attr($data['menu_pdf_name']); ?>">
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-whatsapp"><?php esc_html_e( 'WhatsApp', 'simple-cards-listings' ); ?></label>
-                <input type="text" id="scl-edit-whatsapp" name="whatsapp" value="<?php echo esc_attr( $data['whatsapp'] ); ?>">
+                <label for="scl-edit-whatsapp"><?php esc_html_e('WhatsApp', 'simple-cards-listings'); ?></label>
+                <input type="text" id="scl-edit-whatsapp" name="whatsapp" value="<?php echo esc_attr($data['whatsapp']); ?>">
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-instagram"><?php esc_html_e( 'Instagram', 'simple-cards-listings' ); ?></label>
-                <input type="url" id="scl-edit-instagram" name="instagram" value="<?php echo esc_url( $data['instagram'] ); ?>">
+                <label for="scl-edit-instagram"><?php esc_html_e('Instagram', 'simple-cards-listings'); ?></label>
+                <input type="url" id="scl-edit-instagram" name="instagram" value="<?php echo esc_url($data['instagram']); ?>">
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-tiktok"><?php esc_html_e( 'TikTok', 'simple-cards-listings' ); ?></label>
-                <input type="url" id="scl-edit-tiktok" name="tiktok" value="<?php echo esc_url( $data['tiktok'] ); ?>">
+                <label for="scl-edit-tiktok"><?php esc_html_e('TikTok', 'simple-cards-listings'); ?></label>
+                <input type="url" id="scl-edit-tiktok" name="tiktok" value="<?php echo esc_url($data['tiktok']); ?>">
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-facebook"><?php esc_html_e( 'Facebook', 'simple-cards-listings' ); ?></label>
-                <input type="url" id="scl-edit-facebook" name="facebook" value="<?php echo esc_url( $data['facebook'] ); ?>">
+                <label for="scl-edit-facebook"><?php esc_html_e('Facebook', 'simple-cards-listings'); ?></label>
+                <input type="url" id="scl-edit-facebook" name="facebook" value="<?php echo esc_url($data['facebook']); ?>">
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-website"><?php esc_html_e( 'Sitio Web', 'simple-cards-listings' ); ?></label>
-                <input type="url" id="scl-edit-website" name="website" value="<?php echo esc_url( $data['website'] ); ?>">
+                <label for="scl-edit-website"><?php esc_html_e('Sitio Web', 'simple-cards-listings'); ?></label>
+                <input type="url" id="scl-edit-website" name="website" value="<?php echo esc_url($data['website']); ?>">
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-direccion"><?php esc_html_e( 'Dirección *', 'simple-cards-listings' ); ?></label>
-                <textarea id="scl-edit-direccion" name="direccion" rows="2" required><?php echo esc_textarea( $data['direccion'] ); ?></textarea>
+                <label for="scl-edit-direccion"><?php esc_html_e('Dirección *', 'simple-cards-listings'); ?></label>
+                <textarea id="scl-edit-direccion" name="direccion" rows="2" required><?php echo esc_textarea($data['direccion']); ?></textarea>
             </div>
 
             <div class="scl-form-row">
-                <label for="scl-edit-google-maps"><?php esc_html_e( 'URL de Google Maps', 'simple-cards-listings' ); ?></label>
-                <input type="url" id="scl-edit-google-maps" name="google_maps_url" value="<?php echo esc_url( $data['google_maps_url'] ); ?>">
+                <label for="scl-edit-google-maps"><?php esc_html_e('URL de Google Maps', 'simple-cards-listings'); ?></label>
+                <input type="url" id="scl-edit-google-maps" name="google_maps_url" value="<?php echo esc_url($data['google_maps_url']); ?>">
             </div>
 
             <div class="scl-form-row">
                 <button type="submit" class="scl-btn scl-btn-primary">
-                    <?php esc_html_e( 'Guardar cambios', 'simple-cards-listings' ); ?>
+                    <?php esc_html_e('Guardar cambios', 'simple-cards-listings'); ?>
                 </button>
             </div>
 
             <div id="scl-edit-message" class="scl-form-message" style="display: none;"></div>
         </form>
-        <?php
+<?php
         return ob_get_clean();
     }
 
     /**
      * Actualizar establecimiento
      */
-    public static function update_establecimiento() {
-        check_ajax_referer( 'scl_edit_nonce', 'scl_edit_nonce' );
+    public static function update_establecimiento()
+    {
+        check_ajax_referer('scl_edit_nonce', 'scl_edit_nonce');
 
-        if ( ! is_user_logged_in() ) {
-            wp_send_json_error( array( 'message' => __( 'Debes iniciar sesión.', 'simple-cards-listings' ) ) );
+        if (! is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Debes iniciar sesión.', 'simple-cards-listings')));
         }
 
-        $post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+        $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
 
-        if ( ! $post_id ) {
-            wp_send_json_error( array( 'message' => __( 'ID no válido.', 'simple-cards-listings' ) ) );
+        if (! $post_id) {
+            wp_send_json_error(array('message' => __('ID no válido.', 'simple-cards-listings')));
         }
 
         // Verificar permisos
-        if ( ! SCL_Permissions::can_edit( $post_id ) ) {
-            wp_send_json_error( array( 'message' => __( 'No tienes permiso para editar este establecimiento.', 'simple-cards-listings' ) ) );
+        if (! SCL_Permissions::can_edit($post_id)) {
+            wp_send_json_error(array('message' => __('No tienes permiso para editar este establecimiento.', 'simple-cards-listings')));
         }
 
         // Validar campos requeridos
-        $required_fields = array( 'nombre', 'descripcion', 'categoria', 'direccion' );
-        foreach ( $required_fields as $field ) {
-            if ( empty( $_POST[ $field ] ) ) {
-                wp_send_json_error( array( 'message' => __( 'Todos los campos requeridos deben completarse.', 'simple-cards-listings' ) ) );
+        $required_fields = array('nombre', 'descripcion', 'categoria', 'direccion');
+        foreach ($required_fields as $field) {
+            if (empty($_POST[$field])) {
+                wp_send_json_error(array('message' => __('Todos los campos requeridos deben completarse.', 'simple-cards-listings')));
             }
         }
 
         // Actualizar post
         $post_data = array(
             'ID'           => $post_id,
-            'post_title'   => sanitize_text_field( $_POST['nombre'] ),
-            'post_content' => wp_kses_post( $_POST['descripcion'] ),
+            'post_title'   => sanitize_text_field($_POST['nombre']),
+            'post_content' => wp_kses_post($_POST['descripcion']),
         );
 
-        $result = wp_update_post( $post_data );
+        $result = wp_update_post($post_data);
 
-        if ( is_wp_error( $result ) ) {
-            wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
         }
 
         // Actualizar categoría
-        if ( ! empty( $_POST['categoria'] ) ) {
-            wp_set_object_terms( $post_id, array( absint( $_POST['categoria'] ) ), 'categoria_establecimiento' );
+        if (! empty($_POST['categoria'])) {
+            wp_set_object_terms($post_id, array(absint($_POST['categoria'])), 'categoria_establecimiento');
         }
 
         // Actualizar tags
-        if ( ! empty( $_POST['tags'] ) && is_array( $_POST['tags'] ) ) {
-            $tag_ids = array_map( 'absint', $_POST['tags'] );
-            wp_set_object_terms( $post_id, $tag_ids, 'tag_busqueda' );
+        if (! empty($_POST['tags']) && is_array($_POST['tags'])) {
+            $tag_ids = array_map('absint', $_POST['tags']);
+            wp_set_object_terms($post_id, $tag_ids, 'tag_busqueda');
         } else {
-            wp_set_object_terms( $post_id, array(), 'tag_busqueda' );
+            wp_set_object_terms($post_id, array(), 'tag_busqueda');
         }
 
         // Subir archivos si hay nuevos
@@ -609,26 +619,26 @@ class SCL_Ajax_Handlers {
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
         // Logo
-        if ( ! empty( $_FILES['logo'] ) && $_FILES['logo']['error'] === UPLOAD_ERR_OK ) {
-            $logo_id = media_handle_upload( 'logo', $post_id );
-            if ( ! is_wp_error( $logo_id ) ) {
-                update_post_meta( $post_id, '_scl_logo', $logo_id );
+        if (! empty($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+            $logo_id = media_handle_upload('logo', $post_id);
+            if (! is_wp_error($logo_id)) {
+                update_post_meta($post_id, '_scl_logo', $logo_id);
             }
         }
 
         // Imagen del establecimiento
-        if ( ! empty( $_FILES['imagen_establecimiento'] ) && $_FILES['imagen_establecimiento']['error'] === UPLOAD_ERR_OK ) {
-            $imagen_id = media_handle_upload( 'imagen_establecimiento', $post_id );
-            if ( ! is_wp_error( $imagen_id ) ) {
-                update_post_meta( $post_id, '_scl_imagen_establecimiento', $imagen_id );
+        if (! empty($_FILES['imagen_establecimiento']) && $_FILES['imagen_establecimiento']['error'] === UPLOAD_ERR_OK) {
+            $imagen_id = media_handle_upload('imagen_establecimiento', $post_id);
+            if (! is_wp_error($imagen_id)) {
+                update_post_meta($post_id, '_scl_imagen_establecimiento', $imagen_id);
             }
         }
 
         // PDF
-        if ( ! empty( $_FILES['menu_pdf'] ) && $_FILES['menu_pdf']['error'] === UPLOAD_ERR_OK ) {
-            $pdf_id = media_handle_upload( 'menu_pdf', $post_id );
-            if ( ! is_wp_error( $pdf_id ) ) {
-                update_post_meta( $post_id, '_scl_menu_pdf', $pdf_id );
+        if (! empty($_FILES['menu_pdf']) && $_FILES['menu_pdf']['error'] === UPLOAD_ERR_OK) {
+            $pdf_id = media_handle_upload('menu_pdf', $post_id);
+            if (! is_wp_error($pdf_id)) {
+                update_post_meta($post_id, '_scl_menu_pdf', $pdf_id);
             }
         }
 
@@ -644,20 +654,20 @@ class SCL_Ajax_Handlers {
             'google_maps_url' => 'url',
         );
 
-        foreach ( $meta_fields as $field => $type ) {
-            if ( isset( $_POST[ $field ] ) ) {
+        foreach ($meta_fields as $field => $type) {
+            if (isset($_POST[$field])) {
                 $value = '';
-                switch ( $type ) {
+                switch ($type) {
                     case 'url':
-                        $value = esc_url_raw( $_POST[ $field ] );
+                        $value = esc_url_raw($_POST[$field]);
                         break;
                     case 'textarea':
-                        $value = sanitize_textarea_field( $_POST[ $field ] );
+                        $value = sanitize_textarea_field($_POST[$field]);
                         break;
                     default:
-                        $value = sanitize_text_field( $_POST[ $field ] );
+                        $value = sanitize_text_field($_POST[$field]);
                 }
-                update_post_meta( $post_id, '_scl_' . $field, $value );
+                update_post_meta($post_id, '_scl_' . $field, $value);
             }
         }
 
@@ -666,13 +676,13 @@ class SCL_Ajax_Handlers {
             'establecimiento_updated_frontend',
             sprintf(
                 /* translators: %s: título del establecimiento */
-                __( 'Establecimiento "%s" actualizado desde frontend', 'simple-cards-listings' ),
-                sanitize_text_field( $_POST['nombre'] )
+                __('Establecimiento "%s" actualizado desde frontend', 'simple-cards-listings'),
+                sanitize_text_field($_POST['nombre'])
             ),
             $post_id,
             'establecimiento'
         );
 
-        wp_send_json_success( array( 'message' => __( 'Establecimiento actualizado correctamente.', 'simple-cards-listings' ) ) );
+        wp_send_json_success(array('message' => __('Establecimiento actualizado correctamente.', 'simple-cards-listings')));
     }
 }

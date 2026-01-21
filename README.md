@@ -9,6 +9,7 @@ Plugin de directorio de cartas de contacto de negocios para WordPress, desarroll
 ## Características
 
 ### Para Administradores
+
 - **Custom Post Type "Establecimiento"**: Gestión completa de negocios con campos personalizados
 - **Taxonomías personalizadas**: Categorías de establecimiento y Tags de búsqueda
 - **Campos personalizados**:
@@ -24,11 +25,13 @@ Plugin de directorio de cartas de contacto de negocios para WordPress, desarroll
 - **Panel de configuración**: Opciones personalizables
 
 ### Para Usuarios Registrados
+
 - **Panel de usuario frontend**: Gestión de establecimientos propios
 - **Formulario de solicitud**: Envío de nuevos establecimientos para aprobación
 - **Edición de datos**: Actualización de información de establecimientos asignados
 
 ### Para Visitantes
+
 - **Grid de establecimientos**: Visualización de logos en cuadrícula
 - **Buscador en tiempo real**: Filtrado por nombre, descripción, categoría y tags
 - **Modal de información**: Vista detallada con enlaces a redes, WhatsApp, ubicación y menú
@@ -42,30 +45,37 @@ Plugin de directorio de cartas de contacto de negocios para WordPress, desarroll
 ## Shortcodes
 
 ### Grid de Establecimientos
+
 ```
 [scl_grid]
 ```
 
 Parámetros opcionales:
+
 - `categoria=""` - Filtrar por slug de categoría
 - `limit="-1"` - Límite de resultados (-1 para todos)
 - `columns="3"` - Número de columnas (2-6)
 
 Ejemplo:
+
 ```
 [scl_grid categoria="restaurantes" columns="4" limit="12"]
 ```
 
 ### Formulario de Solicitud
+
 ```
 [scl_solicitud]
 ```
+
 Solo visible para usuarios registrados. Permite solicitar el registro de un nuevo establecimiento.
 
 ### Panel de Usuario
+
 ```
 [scl_user_dashboard]
 ```
+
 Dashboard para que los usuarios gestionen sus establecimientos.
 
 ## Requisitos
@@ -106,6 +116,7 @@ simple-cards-listings/
 ## Internacionalización
 
 El plugin está preparado para traducción. Los archivos de traducción deben colocarse en la carpeta `languages/` con el formato:
+
 - `simple-cards-listings-es_ES.po`
 - `simple-cards-listings-es_ES.mo`
 
@@ -114,6 +125,7 @@ El plugin está preparado para traducción. Los archivos de traducción deben co
 El plugin dispara varios hooks para personalización:
 
 ### Acciones
+
 - `scl_before_grid` - Antes del grid de establecimientos
 - `scl_after_grid` - Después del grid de establecimientos
 - `scl_establecimiento_created` - Cuando se crea un establecimiento
@@ -129,6 +141,7 @@ El plugin dispara varios hooks para personalización:
 ## Changelog
 
 ### 1.0.0
+
 - Versión inicial
 - CPT Establecimiento con taxonomías
 - Grid con buscador en tiempo real
