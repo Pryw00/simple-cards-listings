@@ -124,6 +124,27 @@ class SCL_Metaboxes
 
         echo '<div class="scl-metabox-wrapper">';
 
+        // Campo de propietario (solo para administradores)
+        if (current_user_can('administrator')) {
+            echo '<div class="scl-field-row">';
+            echo '<label for="scl_propietario" class="scl-field-label">' . esc_html__('Propietario', 'simple-cards-listings') . '</label>';
+            echo '<div class="scl-field-input">';
+            $users = get_users(array('fields' => array('ID', 'display_name')));
+            echo '<select name="scl_propietario" id="scl_propietario">';
+            foreach ($users as $user) {
+                printf(
+                    '<option value="%d"%s>%s</option>',
+                    $user->ID,
+                    selected($user->ID, $post->post_author, false),
+                    esc_html($user->display_name . ' (' . $user->user_login . ')')
+                );
+            }
+            echo '</select>';
+            echo '<p class="description">' . esc_html__('Puedes cambiar el propietario del establecimiento.', 'simple-cards-listings') . '</p>';
+            echo '</div>';
+            echo '</div>';
+        }
+
         foreach ($fields as $key => $field) {
             $meta_key = self::PREFIX . $key;
             $value    = get_post_meta($post->ID, $meta_key, true);
@@ -288,6 +309,20 @@ class SCL_Metaboxes
         // Verificar permisos
         if (! current_user_can('edit_post', $post_id)) {
             return;
+        }
+
+        // Cambiar propietario si es admin y el campo está presente, evitando bucle infinito
+        static $cambiando_autor = false;
+        if (!$cambiando_autor && current_user_can('administrator') && isset($_POST['scl_propietario'])) {
+            $nuevo_autor = intval($_POST['scl_propietario']);
+            if ($nuevo_autor && $nuevo_autor !== $post->post_author) {
+                $cambiando_autor = true;
+                wp_update_post(array(
+                    'ID' => $post_id,
+                    'post_author' => $nuevo_autor,
+                ));
+                $cambiando_autor = false;
+            }
         }
 
         $fields = self::get_fields();

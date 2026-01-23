@@ -4,8 +4,8 @@
  * Plugin Name: Simple Cards Listings
  * Plugin URI: https://example.com/simple-cards-listings
  * Description: Plugin de directorio de cartas de contacto de negocios para WordPress, conforme a la especificación IEEE 830-1998.
- * Version: 1.0.0
- * Author: Tu Nombre o Empresa
+ * Version: 1.0.5
+ * Author: Pryw00
  * Author URI: https://example.com
  * Text Domain: simple-cards-listings
  * Domain Path: /languages
@@ -23,7 +23,7 @@ if (! defined('ABSPATH')) {
 }
 
 // Definir constantes del plugin
-define('SCL_VERSION', '1.0.0');
+define('SCL_VERSION', '1.0.5');
 define('SCL_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SCL_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SCL_PLUGIN_BASENAME', plugin_basename(__FILE__));

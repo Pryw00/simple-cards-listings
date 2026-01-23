@@ -88,6 +88,18 @@
         this.handleSolicitudSubmit.bind(this),
       );
 
+      // Dashboard - Solicitar nuevo
+      $(document).on(
+        "click",
+        ".scl-btn-nuevo",
+        this.openSolicitudModal.bind(this),
+      );
+      $(document).on(
+        "click",
+        "#scl-solicitud-modal .scl-modal-close, #scl-solicitud-modal .scl-modal-overlay",
+        this.closeSolicitudModal.bind(this),
+      );
+
       // Dashboard - Editar
       $(document).on("click", ".scl-btn-edit", this.openEditModal.bind(this));
       $(document).on(
@@ -139,10 +151,11 @@
         return;
       }
 
+      // Permitir búsqueda por todas las palabras (AND)
+      const terms = term.split(/\s+/).filter(Boolean);
+
       this.establecimientosData.forEach((item) => {
         const $card = $grid.find('.scl-card-item[data-id="' + item.id + '"]');
-
-        // Buscar en título, descripción, categorías y tags
         const searchableText = [
           item.title,
           item.description,
@@ -152,7 +165,9 @@
           .join(" ")
           .toLowerCase();
 
-        if (searchableText.includes(term)) {
+        // Todas las palabras deben estar presentes
+        const allMatch = terms.every((word) => searchableText.includes(word));
+        if (allMatch) {
           $card.removeClass("scl-hidden");
           visibleCount++;
         } else {
@@ -275,7 +290,7 @@
      */
     handleEscKey: function (e) {
       if (e.key === "Escape") {
-        $("#scl-modal, #scl-edit-modal").hide();
+        $("#scl-modal, #scl-edit-modal, #scl-solicitud-modal").hide();
         $("body").css("overflow", "");
       }
     },
@@ -311,6 +326,14 @@
               .text(response.data.message)
               .show();
             $form[0].reset();
+            // Cerrar modal y recargar después de un momento si estamos en el dashboard
+            setTimeout(function () {
+              if ($("#scl-solicitud-modal").length) {
+                $("#scl-solicitud-modal").hide();
+                $("body").css("overflow", "");
+                location.reload();
+              }
+            }, 1500);
           } else {
             $message
               .removeClass("success")
@@ -332,6 +355,30 @@
             .text($button.data("original-text") || "Enviar solicitud");
         },
       });
+    },
+
+    /**
+     * Abrir modal de solicitud
+     */
+    openSolicitudModal: function (e) {
+      e.preventDefault();
+      const $modal = $("#scl-solicitud-modal");
+      $modal.show();
+      $("body").css("overflow", "hidden");
+    },
+
+    /**
+     * Cerrar modal de solicitud
+     */
+    closeSolicitudModal: function (e) {
+      if (
+        $(e.target).hasClass("scl-modal-overlay") ||
+        $(e.target).hasClass("scl-modal-close") ||
+        $(e.target).closest(".scl-modal-close").length
+      ) {
+        $("#scl-solicitud-modal").hide();
+        $("body").css("overflow", "");
+      }
     },
 
     /**

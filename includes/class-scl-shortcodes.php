@@ -156,7 +156,7 @@ class SCL_Shortcodes
                     $data[] = array(
                         'id'          => $post_id,
                         'title'       => get_the_title(),
-                        'description' => get_the_excerpt(),
+                        'description' => wp_strip_all_tags(get_the_content()),
                         'categories'  => is_array($cats) ? $cats : array(),
                         'tags'        => is_array($tags_terms) ? $tags_terms : array(),
                     );
@@ -380,9 +380,9 @@ class SCL_Shortcodes
         <div class="scl-dashboard-wrapper">
             <div class="scl-dashboard-header">
                 <h2><?php esc_html_e('Mis Establecimientos', 'simple-cards-listings'); ?></h2>
-                <a href="#scl-nuevo-establecimiento" class="scl-btn scl-btn-primary scl-btn-nuevo">
+                <button type="button" class="scl-btn scl-btn-primary scl-btn-nuevo">
                     <?php esc_html_e('Solicitar nuevo establecimiento', 'simple-cards-listings'); ?>
-                </a>
+                </button>
             </div>
 
             <?php if ($establecimientos->have_posts()) : ?>
@@ -440,9 +440,20 @@ class SCL_Shortcodes
                 </div>
             <?php endif; ?>
 
-            <!-- Sección para solicitar nuevo establecimiento -->
-            <div id="scl-nuevo-establecimiento" class="scl-dashboard-section">
-                <?php echo self::render_solicitud_form(array()); ?>
+            <!-- Modal de solicitud de nuevo establecimiento -->
+            <div id="scl-solicitud-modal" class="scl-modal" style="display: none;">
+                <div class="scl-modal-overlay"></div>
+                <div class="scl-modal-content scl-modal-large">
+                    <button type="button" class="scl-modal-close" aria-label="<?php esc_attr_e('Cerrar', 'simple-cards-listings'); ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18"></path>
+                            <path d="m6 6 12 12"></path>
+                        </svg>
+                    </button>
+                    <div class="scl-modal-body">
+                        <?php echo self::render_solicitud_form(array()); ?>
+                    </div>
+                </div>
             </div>
 
             <!-- Modal de edición -->
