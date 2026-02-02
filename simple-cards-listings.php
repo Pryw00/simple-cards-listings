@@ -80,6 +80,7 @@ final class Simple_Cards_Listings
         require_once SCL_PLUGIN_DIR . 'includes/class-scl-logger.php';
         require_once SCL_PLUGIN_DIR . 'includes/class-scl-user-dashboard.php';
         require_once SCL_PLUGIN_DIR . 'includes/class-scl-permissions.php';
+        require_once SCL_PLUGIN_DIR . 'includes/class-scl-integrations.php';
 
         // Admin
         if (is_admin()) {
@@ -98,6 +99,9 @@ final class Simple_Cards_Listings
 
         // Inicialización
         add_action('init', array($this, 'load_textdomain'));
+
+        // Inicializar integraciones con otros plugins
+        new SCL_Integrations();
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
 
