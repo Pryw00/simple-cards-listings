@@ -4,7 +4,7 @@
  * Plugin Name: Simple Cards Listings
  * Plugin URI: https://example.com/simple-cards-listings
  * Description: Plugin de directorio de cartas de contacto de negocios para WordPress, conforme a la especificación IEEE 830-1998.
- * Version: 1.0.6
+ * Version: 1.0.10
  * Author: Pryw00
  * Author URI: https://example.com
  * Text Domain: simple-cards-listings
@@ -23,7 +23,7 @@ if (! defined('ABSPATH')) {
 }
 
 // Definir constantes del plugin
-define('SCL_VERSION', '1.0.6');
+define('SCL_VERSION', '1.0.10');
 define('SCL_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SCL_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SCL_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -241,11 +241,12 @@ final class Simple_Cards_Listings
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce'    => wp_create_nonce('scl_nonce'),
             'i18n'     => array(
-                'loading'       => __('Cargando...', 'simple-cards-listings'),
-                'error'         => __('Ha ocurrido un error', 'simple-cards-listings'),
-                'no_results'    => __('No se encontraron resultados', 'simple-cards-listings'),
-                'close'         => __('Cerrar', 'simple-cards-listings'),
+                'loading'        => __('Cargando...', 'simple-cards-listings'),
+                'error'          => __('Ha ocurrido un error', 'simple-cards-listings'),
+                'no_results'     => __('No se encontraron resultados', 'simple-cards-listings'),
+                'close'          => __('Cerrar', 'simple-cards-listings'),
                 'confirm_delete' => __('¿Estás seguro de eliminar este establecimiento?', 'simple-cards-listings'),
+                'load_more'      => __('Cargar más', 'simple-cards-listings'),
             ),
         ));
     }

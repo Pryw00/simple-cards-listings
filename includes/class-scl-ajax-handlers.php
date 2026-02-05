@@ -30,6 +30,10 @@ class SCL_Ajax_Handlers
         add_action('wp_ajax_scl_search', array(__CLASS__, 'search_establecimientos'));
         add_action('wp_ajax_nopriv_scl_search', array(__CLASS__, 'search_establecimientos'));
 
+        // Paginación - Cargar más establecimientos
+        add_action('wp_ajax_scl_load_more', array(__CLASS__, 'load_more_establecimientos'));
+        add_action('wp_ajax_nopriv_scl_load_more', array(__CLASS__, 'load_more_establecimientos'));
+
         // Formulario de solicitud
         add_action('wp_ajax_scl_submit_solicitud', array(__CLASS__, 'submit_solicitud'));
 
@@ -205,48 +209,171 @@ class SCL_Ajax_Handlers
     /**
      * Búsqueda de establecimientos
      */
+    /**
+     * Buscar establecimientos (AJAX - busca en TODA la base de datos)
+     * Busca en: título, descripción, categorías y tags
+     */
     public static function search_establecimientos()
     {
         check_ajax_referer('scl_nonce', 'nonce');
 
-        $term = isset($_POST['term']) ? sanitize_text_field($_POST['term']) : '';
+        $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
+        $categoria_filter = isset($_POST['categoria_filter']) ? sanitize_text_field($_POST['categoria_filter']) : '';
+        $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
 
-        if (empty($term)) {
-            // Retornar todos si no hay término
-            $args = array(
+        // Si hay búsqueda de texto, buscar en todos los campos
+        if (!empty($search_term)) {
+            // Buscar IDs de posts que coincidan en título o contenido
+            $args_text = array(
                 'post_type'      => 'establecimiento',
                 'post_status'    => 'publish',
                 'posts_per_page' => -1,
-                'orderby'        => 'title',
-                'order'          => 'ASC',
+                's'              => $search_term,
+                'fields'         => 'ids',
             );
+            $text_query = new WP_Query($args_text);
+            $post_ids_text = $text_query->posts;
+
+            // Buscar términos de categoría que coincidan
+            $matching_cats = get_terms(array(
+                'taxonomy'   => 'categoria_establecimiento',
+                'search'     => $search_term,
+                'fields'     => 'ids',
+                'hide_empty' => true,
+            ));
+
+            // Buscar términos de tags que coincidan
+            $matching_tags = get_terms(array(
+                'taxonomy'   => 'tag_busqueda',
+                'search'     => $search_term,
+                'fields'     => 'ids',
+                'hide_empty' => true,
+            ));
+
+            // Buscar posts que tengan esas categorías o tags
+            $post_ids_tax = array();
+            if (!empty($matching_cats) || !empty($matching_tags)) {
+                $tax_query_search = array('relation' => 'OR');
+
+                if (!empty($matching_cats)) {
+                    $tax_query_search[] = array(
+                        'taxonomy' => 'categoria_establecimiento',
+                        'field'    => 'term_id',
+                        'terms'    => $matching_cats,
+                    );
+                }
+
+                if (!empty($matching_tags)) {
+                    $tax_query_search[] = array(
+                        'taxonomy' => 'tag_busqueda',
+                        'field'    => 'term_id',
+                        'terms'    => $matching_tags,
+                    );
+                }
+
+                $args_tax = array(
+                    'post_type'      => 'establecimiento',
+                    'post_status'    => 'publish',
+                    'posts_per_page' => -1,
+                    'tax_query'      => $tax_query_search,
+                    'fields'         => 'ids',
+                );
+                $tax_query_obj = new WP_Query($args_tax);
+                $post_ids_tax = $tax_query_obj->posts;
+            }
+
+            // Combinar todos los IDs encontrados (sin duplicados)
+            $found_post_ids = array_unique(array_merge($post_ids_text, $post_ids_tax));
+
+            // Si se encontraron posts, hacer la consulta final
+            if (!empty($found_post_ids)) {
+                $args = array(
+                    'post_type'      => 'establecimiento',
+                    'post_status'    => 'publish',
+                    'post__in'       => $found_post_ids,
+                    'posts_per_page' => -1,
+                    'orderby'        => 'title',
+                    'order'          => 'ASC',
+                );
+
+                // Aplicar filtros adicionales de categoría si existen
+                $tax_query = array('relation' => 'AND');
+
+                if (!empty($categoria_filter)) {
+                    $tax_query[] = array(
+                        'taxonomy' => 'categoria_establecimiento',
+                        'field'    => 'slug',
+                        'terms'    => $categoria_filter,
+                    );
+                }
+
+                if (!empty($category_selected)) {
+                    $tax_query[] = array(
+                        'taxonomy' => 'categoria_establecimiento',
+                        'field'    => 'slug',
+                        'terms'    => $category_selected,
+                    );
+                }
+
+                if (count($tax_query) > 1) {
+                    $args['tax_query'] = $tax_query;
+                }
+            } else {
+                // No se encontró nada
+                wp_send_json_success(array(
+                    'html' => '',
+                    'count' => 0,
+                ));
+                return;
+            }
         } else {
+            // Sin término de búsqueda, solo aplicar filtros de categoría
             $args = array(
                 'post_type'      => 'establecimiento',
                 'post_status'    => 'publish',
                 'posts_per_page' => -1,
-                's'              => $term,
                 'orderby'        => 'title',
                 'order'          => 'ASC',
             );
+
+            $tax_query = array('relation' => 'AND');
+
+            if (!empty($categoria_filter)) {
+                $tax_query[] = array(
+                    'taxonomy' => 'categoria_establecimiento',
+                    'field'    => 'slug',
+                    'terms'    => $categoria_filter,
+                );
+            }
+
+            if (!empty($category_selected)) {
+                $tax_query[] = array(
+                    'taxonomy' => 'categoria_establecimiento',
+                    'field'    => 'slug',
+                    'terms'    => $category_selected,
+                );
+            }
+
+            if (count($tax_query) > 1) {
+                $args['tax_query'] = $tax_query;
+            }
         }
 
         $query = new WP_Query($args);
-        $results = array();
+        $html = '';
 
         if ($query->have_posts()) {
             while ($query->have_posts()) {
                 $query->the_post();
-                $post_id = get_the_ID();
-                $results[] = array(
-                    'id'   => $post_id,
-                    'html' => SCL_Shortcodes::render_card_item($post_id),
-                );
+                $html .= SCL_Shortcodes::render_card_item(get_the_ID());
             }
             wp_reset_postdata();
         }
 
-        wp_send_json_success(array('items' => $results));
+        wp_send_json_success(array(
+            'html' => $html,
+            'count' => $query->found_posts,
+        ));
     }
 
     /**
@@ -698,5 +825,79 @@ class SCL_Ajax_Handlers
         );
 
         wp_send_json_success(array('message' => __('Establecimiento actualizado correctamente.', 'simple-cards-listings')));
+    }
+
+    /**
+     * Cargar más establecimientos (AJAX para paginación)
+     */
+    public static function load_more_establecimientos()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
+
+        $page = isset($_POST['page']) ? absint($_POST['page']) : 1;
+        $per_page = isset($_POST['per_page']) ? absint($_POST['per_page']) : 12;
+        $categoria_filter = isset($_POST['categoria_filter']) ? sanitize_text_field($_POST['categoria_filter']) : '';
+        $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
+        $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
+
+        if ($per_page <= 0) {
+            $per_page = 12;
+        }
+
+        $args = array(
+            'post_type'      => 'establecimiento',
+            'post_status'    => 'publish',
+            'posts_per_page' => $per_page,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'paged'          => $page,
+        );
+
+        // Aplicar filtros de taxonomía
+        $tax_query = array('relation' => 'AND');
+
+        // Filtro de categoría desde shortcode
+        if (!empty($categoria_filter)) {
+            $tax_query[] = array(
+                'taxonomy' => 'categoria_establecimiento',
+                'field'    => 'slug',
+                'terms'    => $categoria_filter,
+            );
+        }
+
+        // Filtro de categoría desde dropdown
+        if (!empty($category_selected)) {
+            $tax_query[] = array(
+                'taxonomy' => 'categoria_establecimiento',
+                'field'    => 'slug',
+                'terms'    => $category_selected,
+            );
+        }
+
+        if (count($tax_query) > 1) {
+            $args['tax_query'] = $tax_query;
+        }
+
+        // Si hay búsqueda de texto, necesitamos manejarla diferente
+        if (!empty($search_term)) {
+            $args['s'] = $search_term;
+        }
+
+        $query = new WP_Query($args);
+        $html = '';
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $html .= SCL_Shortcodes::render_card_item(get_the_ID());
+            }
+            wp_reset_postdata();
+        }
+
+        wp_send_json_success(array(
+            'html' => $html,
+            'has_more' => $query->max_num_pages > $page,
+            'max_pages' => $query->max_num_pages,
+        ));
     }
 }

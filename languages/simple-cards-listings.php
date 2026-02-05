@@ -75,7 +75,7 @@ __('Seleccionar archivo', 'simple-cards-listings');
 __('Quitar archivo', 'simple-cards-listings');
 
 // Shortcodes
-__('Ej: Pollo, hamburguesa, oriental.....', 'simple-cards-listings');
+__('Buscar Establecimiento...', 'simple-cards-listings');
 __('Buscar', 'simple-cards-listings');
 __('No se encontraron resultados para tu búsqueda.', 'simple-cards-listings');
 __('WhatsApp', 'simple-cards-listings');

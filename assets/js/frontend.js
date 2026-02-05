@@ -13,34 +13,67 @@
    */
   const SCL = {
     /**
-     * Data de establecimientos para búsqueda
-     */
-    establecimientosData: [],
-
-    /**
      * Timer para debounce de búsqueda
      */
     searchTimer: null,
 
     /**
-     * Inicializar
+     * Flag de inicialización
      */
-    init: function () {
-      this.loadEstablecimientosData();
-      this.bindEvents();
+    initialized: false,
+
+    /**
+     * Configuración de paginación
+     */
+    paginationConfig: {
+      type: "default",
+      perPage: 12,
+      currentPage: 1,
+      maxPages: 1,
+      categoriaFilter: "",
+      isLoading: false,
     },
 
     /**
-     * Cargar datos de establecimientos
+     * Inicializar
      */
-    loadEstablecimientosData: function () {
-      const dataElement = document.getElementById("scl-establecimientos-data");
-      if (dataElement) {
-        try {
-          this.establecimientosData = JSON.parse(dataElement.textContent);
-        } catch (e) {
-          console.error("Error parsing establecimientos data:", e);
-        }
+    init: function () {
+      // Evitar inicialización múltiple
+      if (this.initialized) {
+        return;
+      }
+      this.initialized = true;
+
+      this.loadPaginationConfig();
+      this.bindEvents();
+      this.initPagination();
+    },
+
+    /**
+     * Cargar configuración de paginación desde el contenedor
+     */
+    loadPaginationConfig: function () {
+      const $container = $(".scl-container");
+      if ($container.length) {
+        this.paginationConfig.type =
+          $container.data("pagination-type") || "default";
+        this.paginationConfig.perPage =
+          parseInt($container.data("per-page")) || 12;
+        this.paginationConfig.categoriaFilter =
+          $container.data("categoria-filter") || "";
+      }
+    },
+
+    /**
+     * Inicializar paginación según tipo
+     */
+    initPagination: function () {
+      if (this.paginationConfig.type === "lazy") {
+        this.initLazyLoad();
+      } else if (this.paginationConfig.type === "load_more") {
+        this.initLoadMore();
+      } else {
+        this.initDefaultPagination();
       }
     },
 
@@ -48,6 +81,17 @@
      * Vincular eventos
      */
     bindEvents: function () {
+      // Desvincular eventos previos para evitar duplicados
+      $(document).off("input", "#scl-search-input");
+      $(document).off("focus", "#scl-search-input");
+      $(document).off("blur", "#scl-search-input");
+      $(document).off("mousedown", ".scl-suggestion-item");
+      $(document).off("change", "#scl-category-filter");
+      $(document).off("click", ".scl-load-more-btn");
+      $(document).off("click", ".scl-pagination a");
+      $(document).off("click", ".scl-card-item");
+      $(document).off("click", ".scl-modal-close, .scl-modal-overlay");
+
       // Búsqueda en tiempo real
       $(document).on(
         "input",
@@ -68,6 +112,25 @@
         "mousedown",
         ".scl-suggestion-item",
         this.selectSuggestion.bind(this),
+      );
+
+      // Filtro de categoría
+      $(document).on(
+        "change",
+        "#scl-category-filter",
+        this.handleCategoryFilter.bind(this),
+      );
+
+      // Paginación
+      $(document).on(
+        "click",
+        ".scl-load-more-btn",
+        this.handleLoadMoreClick.bind(this),
+      );
+      $(document).on(
+        "click",
+        ".scl-pagination a",
+        this.handlePaginationClick.bind(this),
       );
 
       // Click en card para abrir modal
@@ -127,35 +190,378 @@
      * Manejar búsqueda
      */
     handleSearch: function (e) {
-      const term = e.target.value.toLowerCase().trim();
+      const term = e.target.value.trim();
 
       clearTimeout(this.searchTimer);
 
       this.searchTimer = setTimeout(() => {
-        this.filterEstablecimientos(term);
-      }, 200);
+        this.performSearch(term);
+      }, 400);
     },
 
     /**
-     * Filtrar establecimientos
+     * Manejar filtro de categoría
      */
-    filterEstablecimientos: function (term) {
+    handleCategoryFilter: function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const categorySlug = $(e.target).val();
+      const searchTerm = $("#scl-search-input").val().trim();
+
+      // Evitar ejecuciones múltiples
+      if (this.paginationConfig.isLoading) {
+        return;
+      }
+
+      // Siempre recargar con AJAX cuando cambia el filtro
+      this.paginationConfig.currentPage = 1;
+      this.performSearch(searchTerm, categorySlug);
+    },
+
+    /**
+     * Realizar búsqueda (por AJAX, busca en TODA la base de datos)
+     */
+    performSearch: function (searchTerm, categorySlug) {
+      const self = this;
+      const $grid = $("#scl-grid");
+      const $noResults = $("#scl-no-results");
+      const $pagination = $(".scl-pagination-wrapper");
+
+      categorySlug = categorySlug || $("#scl-category-filter").val() || "";
+      searchTerm = searchTerm || "";
+
+      // Si no hay búsqueda ni filtro, recargar página inicial
+      if (!searchTerm && !categorySlug) {
+        this.reloadGrid("", "");
+        return;
+      }
+
+      if (this.paginationConfig.isLoading) return;
+      this.paginationConfig.isLoading = true;
+
+      // Mostrar loading
+      $grid.html('<div class="scl-loading"></div>');
+      $noResults.hide();
+      $pagination.hide(); // Ocultar paginación durante búsqueda
+
+      $.ajax({
+        url: scl_ajax.ajax_url,
+        type: "POST",
+        data: {
+          action: "scl_search",
+          nonce: scl_ajax.nonce,
+          search_term: searchTerm,
+          categoria_filter: this.paginationConfig.categoriaFilter,
+          category_selected: categorySlug,
+        },
+        success: function (response) {
+          if (response.success) {
+            if (response.data.html) {
+              $grid.html(response.data.html);
+              $noResults.hide();
+            } else {
+              $grid.html("");
+              $noResults.show();
+            }
+            // No mostrar paginación cuando hay búsqueda activa
+          } else {
+            $grid.html("");
+            $noResults.show();
+          }
+        },
+        error: function () {
+          $grid.html(
+            '<p class="scl-message scl-message-error">' +
+              scl_ajax.i18n.error +
+              "</p>",
+          );
+        },
+        complete: function () {
+          self.paginationConfig.isLoading = false;
+        },
+      });
+    },
+
+    /**
+     * Recargar grid con AJAX
+     */
+    reloadGrid: function (searchTerm, categorySlug) {
+      const self = this;
+      const $grid = $("#scl-grid");
+      const $pagination = $(".scl-pagination-wrapper");
+
+      if (this.paginationConfig.isLoading) return;
+      this.paginationConfig.isLoading = true;
+
+      // Mostrar loading
+      $grid.html('<div class="scl-loading"></div>');
+
+      $.ajax({
+        url: scl_ajax.ajax_url,
+        type: "POST",
+        data: {
+          action: "scl_load_more",
+          nonce: scl_ajax.nonce,
+          page: 1,
+          per_page: this.paginationConfig.perPage,
+          categoria_filter: this.paginationConfig.categoriaFilter,
+          category_selected: categorySlug,
+          search_term: searchTerm,
+        },
+        success: function (response) {
+          if (response.success) {
+            $grid.html(response.data.html);
+            self.paginationConfig.maxPages = response.data.max_pages;
+            self.updatePaginationControls(1, response.data.has_more);
+            $pagination.show(); // Mostrar paginación
+          }
+        },
+        error: function () {
+          $grid.html(
+            '<p class="scl-message scl-message-error">' +
+              scl_ajax.i18n.error +
+              "</p>",
+          );
+        },
+        complete: function () {
+          self.paginationConfig.isLoading = false;
+        },
+      });
+    },
+
+    /**
+     * Inicializar Lazy Load
+     */
+    initLazyLoad: function () {
+      const self = this;
+      const $window = $(window);
+      const $loader = $(".scl-lazy-loader");
+
+      if (!$loader.length) return;
+
+      this.paginationConfig.maxPages = parseInt($loader.data("max-pages")) || 1;
+
+      $window.on("scroll", function () {
+        if (self.paginationConfig.isLoading) return;
+        if (self.paginationConfig.currentPage >= self.paginationConfig.maxPages)
+          return;
+
+        const scrollTop = $window.scrollTop();
+        const windowHeight = $window.height();
+        const documentHeight = $(document).height();
+
+        // Si está cerca del final (200px antes)
+        if (scrollTop + windowHeight >= documentHeight - 200) {
+          self.loadMoreEstablecimientos();
+        }
+      });
+    },
+
+    /**
+     * Inicializar botón "Cargar más"
+     */
+    initLoadMore: function () {
+      const $btn = $(".scl-load-more-btn");
+      if ($btn.length) {
+        this.paginationConfig.maxPages = parseInt($btn.data("max-pages")) || 1;
+      }
+    },
+
+    /**
+     * Inicializar paginación tradicional
+     */
+    initDefaultPagination: function () {
+      const $pagination = $(".scl-pagination");
+      if ($pagination.length) {
+        this.paginationConfig.maxPages =
+          parseInt($pagination.data("max-pages")) || 1;
+      }
+    },
+
+    /**
+     * Manejar click en botón "Cargar más"
+     */
+    handleLoadMoreClick: function (e) {
+      e.preventDefault();
+      this.loadMoreEstablecimientos();
+    },
+
+    /**
+     * Manejar click en paginación tradicional
+     */
+    handlePaginationClick: function (e) {
+      e.preventDefault();
+      const $link = $(e.currentTarget);
+      const href = $link.attr("href");
+
+      // Extraer número de página del href
+      const match = href.match(/paged=(\d+)/);
+      if (match) {
+        const page = parseInt(match[1]);
+        this.loadPage(page, true);
+      }
+    },
+
+    /**
+     * Cargar más establecimientos (para lazy y load_more)
+     */
+    loadMoreEstablecimientos: function () {
+      const nextPage = this.paginationConfig.currentPage + 1;
+      this.loadPage(nextPage, false);
+    },
+
+    /**
+     * Cargar página específica
+     */
+    loadPage: function (page, replace) {
+      const self = this;
+      const $grid = $("#scl-grid");
+      const categorySelected = $("#scl-category-filter").val() || "";
+      const searchTerm = $("#scl-search-input").val().toLowerCase().trim();
+
+      if (this.paginationConfig.isLoading) return;
+      if (page > this.paginationConfig.maxPages) return;
+
+      this.paginationConfig.isLoading = true;
+
+      // Mostrar loader
+      if (this.paginationConfig.type === "lazy") {
+        $(".scl-lazy-loader").show();
+      } else if (this.paginationConfig.type === "load_more") {
+        $(".scl-load-more-btn").prop("disabled", true).text("Cargando...");
+      } else if (replace) {
+        $grid.html('<div class="scl-loading"></div>');
+        $("html, body").animate({ scrollTop: $grid.offset().top - 100 }, 300);
+      }
+
+      $.ajax({
+        url: scl_ajax.ajax_url,
+        type: "POST",
+        data: {
+          action: "scl_load_more",
+          nonce: scl_ajax.nonce,
+          page: page,
+          per_page: this.paginationConfig.perPage,
+          categoria_filter: this.paginationConfig.categoriaFilter,
+          category_selected: categorySelected,
+          search_term: searchTerm,
+        },
+        success: function (response) {
+          if (response.success) {
+            if (replace) {
+              $grid.html(response.data.html);
+            } else {
+              $grid.append(response.data.html);
+            }
+            self.paginationConfig.currentPage = page;
+            self.paginationConfig.maxPages = response.data.max_pages;
+            self.updatePaginationControls(page, response.data.has_more);
+          }
+        },
+        error: function () {
+          if (replace) {
+            $grid.html(
+              '<p class="scl-message scl-message-error">' +
+                scl_ajax.i18n.error +
+                "</p>",
+            );
+          }
+        },
+        complete: function () {
+          self.paginationConfig.isLoading = false;
+          if (self.paginationConfig.type === "lazy") {
+            $(".scl-lazy-loader").hide();
+          } else if (self.paginationConfig.type === "load_more") {
+            $(".scl-load-more-btn")
+              .prop("disabled", false)
+              .text(scl_ajax.i18n.load_more || "Cargar más");
+          }
+        },
+      });
+    },
+
+    /**
+     * Actualizar controles de paginación
+     */
+    updatePaginationControls: function (currentPage, hasMore) {
+      if (this.paginationConfig.type === "load_more") {
+        const $btn = $(".scl-load-more-btn");
+        $btn.data("page", currentPage);
+        if (!hasMore) {
+          $btn.hide();
+        } else {
+          $btn.show();
+        }
+      } else if (this.paginationConfig.type === "default") {
+        // Regenerar links de paginación
+        this.regeneratePaginationLinks(currentPage);
+      }
+    },
+
+    /**
+     * Regenerar links de paginación
+     */
+    regeneratePaginationLinks: function (currentPage) {
+      const $pagination = $(".scl-pagination");
+      const maxPages = this.paginationConfig.maxPages;
+
+      if (!$pagination.length || maxPages <= 1) return;
+
+      let html = "";
+
+      // Botón anterior
+      if (currentPage > 1) {
+        html +=
+          '<a href="?paged=' +
+          (currentPage - 1) +
+          '" class="prev page-numbers">&laquo;</a>';
+      }
+
+      // Números de página
+      for (let i = 1; i <= maxPages; i++) {
+        if (i === currentPage) {
+          html += '<span class="page-numbers current">' + i + "</span>";
+        } else {
+          html +=
+            '<a href="?paged=' + i + '" class="page-numbers">' + i + "</a>";
+        }
+      }
+
+      // Botón siguiente
+      if (currentPage < maxPages) {
+        html +=
+          '<a href="?paged=' +
+          (currentPage + 1) +
+          '" class="next page-numbers">&raquo;</a>';
+      }
+
+      $pagination.html(html);
+      $pagination.data("current-page", currentPage);
+    },
+
+    /**
+     * Filtrar establecimientos (búsqueda local en el lado del cliente)
+     */
+    filterEstablecimientos: function (term, categorySlug) {
       const $grid = $("#scl-grid");
       const $noResults = $("#scl-no-results");
       let visibleCount = 0;
 
-      if (!term) {
-        // Mostrar todos
+      // Si no hay término de búsqueda ni categoría, mostrar todos
+      if (!term && !categorySlug) {
         $grid.find(".scl-card-item").removeClass("scl-hidden");
         $noResults.hide();
         return;
       }
 
       // Permitir búsqueda por todas las palabras (AND)
-      const terms = term.split(/\s+/).filter(Boolean);
+      const terms = term ? term.split(/\s+/).filter(Boolean) : [];
 
       this.establecimientosData.forEach((item) => {
         const $card = $grid.find('.scl-card-item[data-id="' + item.id + '"]');
+        if (!$card.length) return;
+
         const searchableText = [
           item.title,
           item.description,
@@ -165,9 +571,20 @@
           .join(" ")
           .toLowerCase();
 
-        // Todas las palabras deben estar presentes
-        const allMatch = terms.every((word) => searchableText.includes(word));
-        if (allMatch) {
+        // Verificar si coincide con el término de búsqueda
+        const textMatch =
+          terms.length === 0 ||
+          terms.every((word) => searchableText.includes(word));
+
+        // Verificar si coincide con la categoría
+        const categoryMatch =
+          !categorySlug ||
+          (item.categories &&
+            item.categories.some(
+              (cat) => cat.toLowerCase() === categorySlug.toLowerCase(),
+            ));
+
+        if (textMatch && categoryMatch) {
           $card.removeClass("scl-hidden");
           visibleCount++;
         } else {
@@ -225,7 +642,7 @@
       const term = $(e.currentTarget).data("term");
       $("#scl-search-input").val(term);
       $("#scl-search-suggestions").hide();
-      this.filterEstablecimientos(term.toLowerCase());
+      this.performSearch(term);
     },
 
     /**

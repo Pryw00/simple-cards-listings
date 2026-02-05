@@ -29,7 +29,7 @@ class SCL_Shortcodes
 
     /**
      * Shortcode: Grid de establecimientos
-     * [scl_grid categoria="" limit="-1" columns="3"]
+     * [scl_grid categoria="" columns="3" per_page="12" pagination_type="default" search_placeholder=""]
      *
      * @param array $atts Atributos del shortcode.
      * @return string
@@ -37,20 +37,31 @@ class SCL_Shortcodes
     public static function render_grid($atts)
     {
         $atts = shortcode_atts(array(
-            'categoria' => '',
-            'limit'     => -1,
-            'columns'   => 3,
+            'categoria'          => '',
+            'limit'              => -1,
+            'columns'            => 3,
+            'per_page'           => 12,
+            'pagination_type'    => 'default', // default, lazy, load_more
+            'search_placeholder' => '', // Texto personalizado para el buscador
         ), $atts, 'scl_grid');
+
+        // Determinar posts_per_page basado en paginación
+        $posts_per_page = intval($atts['per_page']);
+        if ($posts_per_page <= 0) {
+            $posts_per_page = 12; // Default
+        }
 
         $args = array(
             'post_type'      => 'establecimiento',
             'post_status'    => 'publish',
-            'posts_per_page' => intval($atts['limit']),
+            'posts_per_page' => $posts_per_page,
             'orderby'        => 'title',
             'order'          => 'ASC',
+            'paged'          => 1,
         );
 
         // Filtrar por categoría si se especifica
+        $categoria_filter = '';
         if (! empty($atts['categoria'])) {
             $args['tax_query'] = array(
                 array(
@@ -59,15 +70,31 @@ class SCL_Shortcodes
                     'terms'    => sanitize_text_field($atts['categoria']),
                 ),
             );
+            $categoria_filter = sanitize_text_field($atts['categoria']);
         }
 
         $establecimientos = new WP_Query($args);
 
-        // Obtener categorías para el filtro
-        $categorias = get_terms(array(
-            'taxonomy'   => 'categoria_establecimiento',
-            'hide_empty' => true,
-        ));
+        // Obtener categorías para el filtro dropdown
+        // Si hay categoría filtrada, obtener sus hijos
+        $categorias_dropdown = array();
+        if (!empty($categoria_filter)) {
+            $parent_term = get_term_by('slug', $categoria_filter, 'categoria_establecimiento');
+            if ($parent_term) {
+                $categorias_dropdown = get_terms(array(
+                    'taxonomy'   => 'categoria_establecimiento',
+                    'hide_empty' => true,
+                    'parent'     => $parent_term->term_id,
+                ));
+            }
+        } else {
+            // Sin filtro, mostrar todas las categorías padre
+            $categorias_dropdown = get_terms(array(
+                'taxonomy'   => 'categoria_establecimiento',
+                'hide_empty' => true,
+                'parent'     => 0,
+            ));
+        }
 
         // Obtener tags para sugerencias
         $tags = get_terms(array(
@@ -77,7 +104,12 @@ class SCL_Shortcodes
 
         ob_start();
 ?>
-        <div class="scl-container">
+        <div class="scl-container"
+            data-pagination-type="<?php echo esc_attr($atts['pagination_type']); ?>"
+            data-per-page="<?php echo esc_attr($posts_per_page); ?>"
+            data-categoria-filter="<?php echo esc_attr($categoria_filter); ?>"
+            data-columns="<?php echo esc_attr($atts['columns']); ?>">
+
             <!-- Buscador -->
             <div class="scl-search-wrapper">
                 <div class="scl-search-box">
@@ -85,8 +117,21 @@ class SCL_Shortcodes
                         type="text"
                         id="scl-search-input"
                         class="scl-search-input"
-                        placeholder="<?php esc_attr_e('Buscar establecimiento...', 'simple-cards-listings'); ?>"
+                        placeholder="<?php echo esc_attr(!empty($atts['search_placeholder']) ? $atts['search_placeholder'] : __('Buscar Establecimiento...', 'simple-cards-listings')); ?>"
                         autocomplete="off">
+
+                    <!-- Dropdown de categorías (solo si hay categorías) -->
+                    <?php if (!empty($categorias_dropdown) && !is_wp_error($categorias_dropdown)) : ?>
+                        <select id="scl-category-filter" class="scl-category-filter">
+                            <option value=""><?php esc_html_e('Todas las categorías', 'simple-cards-listings'); ?></option>
+                            <?php foreach ($categorias_dropdown as $cat) : ?>
+                                <option value="<?php echo esc_attr($cat->slug); ?>">
+                                    <?php echo esc_html($cat->name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+
                     <button type="button" class="scl-search-button" aria-label="<?php esc_attr_e('Buscar', 'simple-cards-listings'); ?>">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>
@@ -121,6 +166,33 @@ class SCL_Shortcodes
             <div id="scl-no-results" class="scl-no-results" style="display: none;">
                 <?php esc_html_e('No se encontraron resultados para tu búsqueda.', 'simple-cards-listings'); ?>
             </div>
+
+            <!-- Área de paginación -->
+            <div class="scl-pagination-wrapper">
+                <?php if ($atts['pagination_type'] === 'load_more' && $establecimientos->max_num_pages > 1) : ?>
+                    <button type="button" class="scl-load-more-btn" data-page="1" data-max-pages="<?php echo esc_attr($establecimientos->max_num_pages); ?>">
+                        <?php esc_html_e('Cargar más', 'simple-cards-listings'); ?>
+                    </button>
+                <?php elseif ($atts['pagination_type'] === 'default' && $establecimientos->max_num_pages > 1) : ?>
+                    <div class="scl-pagination" data-current-page="1" data-max-pages="<?php echo esc_attr($establecimientos->max_num_pages); ?>">
+                        <?php
+                        echo paginate_links(array(
+                            'total'   => $establecimientos->max_num_pages,
+                            'current' => 1,
+                            'format'  => '?paged=%#%',
+                            'prev_text' => '&laquo;',
+                            'next_text' => '&raquo;',
+                        ));
+                        ?>
+                    </div>
+                <?php endif; ?>
+                <!-- Para lazy load, el scroll se detecta automáticamente -->
+                <?php if ($atts['pagination_type'] === 'lazy') : ?>
+                    <div class="scl-lazy-loader" style="display: none;" data-page="1" data-max-pages="<?php echo esc_attr($establecimientos->max_num_pages); ?>">
+                        <div class="scl-loading"></div>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- Modal de establecimiento -->
@@ -138,34 +210,6 @@ class SCL_Shortcodes
                 </div>
             </div>
         </div>
-
-        <!-- Datos para JavaScript -->
-        <script type="application/json" id="scl-establecimientos-data">
-            <?php
-            $data = array();
-            if ($establecimientos->have_posts()) {
-                $establecimientos->rewind_posts();
-                while ($establecimientos->have_posts()) {
-                    $establecimientos->the_post();
-                    $post_id = get_the_ID();
-
-                    // Obtener términos
-                    $cats = wp_get_post_terms($post_id, 'categoria_establecimiento', array('fields' => 'names'));
-                    $tags_terms = wp_get_post_terms($post_id, 'tag_busqueda', array('fields' => 'names'));
-
-                    $data[] = array(
-                        'id'          => $post_id,
-                        'title'       => get_the_title(),
-                        'description' => wp_strip_all_tags(get_the_content()),
-                        'categories'  => is_array($cats) ? $cats : array(),
-                        'tags'        => is_array($tags_terms) ? $tags_terms : array(),
-                    );
-                }
-                wp_reset_postdata();
-            }
-            echo wp_json_encode($data);
-            ?>
-        </script>
     <?php
         return ob_get_clean();
     }
