@@ -4,7 +4,7 @@
  * Plugin Name: Simple Cards Listings
  * Plugin URI: https://example.com/simple-cards-listings
  * Description: Plugin de directorio de cartas de contacto de negocios para WordPress, conforme a la especificación IEEE 830-1998.
- * Version: 1.0.10
+ * Version: 1.0.18
  * Author: Pryw00
  * Author URI: https://example.com
  * Text Domain: simple-cards-listings
@@ -23,7 +23,7 @@ if (! defined('ABSPATH')) {
 }
 
 // Definir constantes del plugin
-define('SCL_VERSION', '1.0.10');
+define('SCL_VERSION', '1.0.18');
 define('SCL_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SCL_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SCL_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -81,6 +81,7 @@ final class Simple_Cards_Listings
         require_once SCL_PLUGIN_DIR . 'includes/class-scl-user-dashboard.php';
         require_once SCL_PLUGIN_DIR . 'includes/class-scl-permissions.php';
         require_once SCL_PLUGIN_DIR . 'includes/class-scl-integrations.php';
+        require_once SCL_PLUGIN_DIR . 'includes/class-scl-cupones.php';
 
         // Admin
         if (is_admin()) {
@@ -106,8 +107,9 @@ final class Simple_Cards_Listings
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
 
         // Inicializar componentes
-        add_action('init', array('SCL_Post_Types', 'init'));
-        add_action('init', array('SCL_Taxonomies', 'init'));
+        add_action('init', array('SCL_Post_Types', 'init'), 5);
+        add_action('init', array('SCL_Taxonomies', 'init'), 5);
+        add_action('init', array('SCL_Cupones', 'init'), 5); // Promociones CPT - prioridad baja para registrar temprano
         add_action('add_meta_boxes', array('SCL_Metaboxes', 'register'));
         add_action('save_post', array('SCL_Metaboxes', 'save'), 10, 2);
 
@@ -227,10 +229,19 @@ final class Simple_Cards_Listings
             SCL_VERSION
         );
 
-        // JavaScript
+        // JavaScript principal
         wp_enqueue_script(
             'scl-frontend',
             SCL_PLUGIN_URL . 'assets/js/frontend.js',
+            array('jquery'),
+            SCL_VERSION,
+            true
+        );
+
+        // JavaScript de cupones
+        wp_enqueue_script(
+            'scl-cupones',
+            SCL_PLUGIN_URL . 'assets/js/cupones.js',
             array('jquery'),
             SCL_VERSION,
             true
@@ -248,6 +259,12 @@ final class Simple_Cards_Listings
                 'confirm_delete' => __('¿Estás seguro de eliminar este establecimiento?', 'simple-cards-listings'),
                 'load_more'      => __('Cargar más', 'simple-cards-listings'),
             ),
+        ));
+
+        // Pasar variables a cupones.js
+        wp_localize_script('scl-cupones', 'sclData', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('scl_nonce'),
         ));
     }
 

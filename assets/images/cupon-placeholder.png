@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e91e8c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d11a7e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="240" fill="url(#grad)"/>
+  <g fill="#ffffff" opacity="0.9">
+    <!-- Icono de cupón -->
+    <path d="M180 80h40v10h-40zm0 20h60v10h-60zm0 20h50v10h-50z" />
+    <rect x="160" y="70" width="80" height="80" fill="none" stroke="#ffffff" stroke-width="3" stroke-dasharray="5,5" rx="5"/>
+    <!-- Texto -->
+    <text x="200" y="175" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#ffffff">CUPÓN</text>
+  </g>
+</svg>

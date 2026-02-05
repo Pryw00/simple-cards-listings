@@ -23,8 +23,134 @@ class SCL_Shortcodes
     public static function init()
     {
         add_shortcode('scl_grid', array(__CLASS__, 'render_grid'));
+        add_shortcode('scl_cupones', array(__CLASS__, 'render_cupones_grid'));
         add_shortcode('scl_solicitud', array(__CLASS__, 'render_solicitud_form'));
         add_shortcode('scl_user_dashboard', array(__CLASS__, 'render_user_dashboard'));
+
+        // Hook para mostrar modal de promoción compartida en cualquier página
+        add_action('wp_footer', array(__CLASS__, 'render_shared_promocion_modal'));
+    }
+
+    /**
+     * Renderizar modal de promoción compartida (cuando se accede via URL con cupon_id)
+     */
+    public static function render_shared_promocion_modal()
+    {
+        // Solo si hay cupon_id en la URL y no estamos en una página con el shortcode de cupones
+        if (!isset($_GET['cupon_id'])) {
+            return;
+        }
+
+        $cupon_id = intval($_GET['cupon_id']);
+        if (!$cupon_id || get_post_type($cupon_id) !== 'promocion') {
+            return;
+        }
+
+        $cupon = get_post($cupon_id);
+        if (!$cupon || $cupon->post_status !== 'publish') {
+            return;
+        }
+
+        // Obtener datos de la promoción
+        $imagen_url = get_the_post_thumbnail_url($cupon_id, 'large');
+        if (!$imagen_url) {
+            $imagen_url = SCL_PLUGIN_URL . 'assets/images/cupon-placeholder.png';
+        }
+
+        $establecimiento_id = get_post_meta($cupon_id, '_scl_establecimiento_id', true);
+        $establecimiento = null;
+        if ($establecimiento_id) {
+            $est = get_post($establecimiento_id);
+            if ($est) {
+                $establecimiento = array(
+                    'titulo' => $est->post_title,
+                    'url' => get_permalink($est->ID),
+                );
+            }
+        }
+
+        $fecha_inicio = get_post_meta($cupon_id, '_scl_fecha_inicio', true);
+        $fecha_fin = get_post_meta($cupon_id, '_scl_fecha_fin', true);
+        $destacado = get_post_meta($cupon_id, '_scl_destacado', true) == '1';
+
+?>
+        <!-- Modal de promoción compartida -->
+        <div id="scl-shared-cupon-modal" class="scl-modal" style="display: block;">
+            <div class="scl-modal-overlay" onclick="document.getElementById('scl-shared-cupon-modal').style.display='none';"></div>
+            <div class="scl-modal-content scl-cupon-modal-content">
+                <button type="button" class="scl-modal-close" onclick="document.getElementById('scl-shared-cupon-modal').style.display='none'; window.history.replaceState({}, '', window.location.pathname);" aria-label="<?php esc_attr_e('Cerrar', 'simple-cards-listings'); ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+                <div class="scl-modal-body">
+                    <div class="scl-cupon-modal-inner">
+                        <!-- Imagen -->
+                        <div class="scl-cupon-modal-imagen">
+                            <img src="<?php echo esc_url($imagen_url); ?>" alt="<?php echo esc_attr($cupon->post_title); ?>">
+                            <?php if ($destacado) : ?>
+                                <div class="scl-cupon-badge-destacado">⭐ <?php esc_html_e('Destacado', 'simple-cards-listings'); ?></div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Información -->
+                        <div class="scl-cupon-modal-info">
+                            <?php if ($establecimiento) : ?>
+                                <div class="scl-cupon-establecimiento">
+                                    <a href="<?php echo esc_url($establecimiento['url']); ?>" target="_blank"><?php echo esc_html($establecimiento['titulo']); ?></a>
+                                </div>
+                            <?php endif; ?>
+
+                            <h2 class="scl-cupon-modal-titulo"><?php echo esc_html($cupon->post_title); ?></h2>
+                            <div class="scl-cupon-modal-descripcion"><?php echo wpautop($cupon->post_content); ?></div>
+
+                            <?php if ($fecha_inicio || $fecha_fin) : ?>
+                                <div class="scl-cupon-fechas">
+                                    <?php if ($fecha_inicio) : ?>
+                                        <div class="scl-cupon-fecha"><strong><?php esc_html_e('Válido desde:', 'simple-cards-listings'); ?></strong> <?php echo esc_html(date_i18n(get_option('date_format'), strtotime($fecha_inicio))); ?></div>
+                                    <?php endif; ?>
+                                    <?php if ($fecha_fin) : ?>
+                                        <div class="scl-cupon-fecha"><strong><?php esc_html_e('Válido hasta:', 'simple-cards-listings'); ?></strong> <?php echo esc_html(date_i18n(get_option('date_format'), strtotime($fecha_fin))); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Botones de acción -->
+                            <div class="scl-cupon-acciones">
+                                <button type="button" class="scl-btn scl-btn-secondary" onclick="navigator.clipboard.writeText(window.location.href); alert('<?php esc_attr_e('Enlace copiado al portapapeles', 'simple-cards-listings'); ?>');">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                                        <polyline points="16 6 12 2 8 6"></polyline>
+                                        <line x1="12" y1="2" x2="12" y2="15"></line>
+                                    </svg>
+                                    <?php esc_html_e('Compartir', 'simple-cards-listings'); ?>
+                                </button>
+
+                                <a href="<?php echo esc_url($imagen_url); ?>" download class="scl-btn scl-btn-secondary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    <?php esc_html_e('Descargar', 'simple-cards-listings'); ?>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <style>
+            #scl-shared-cupon-modal {
+                z-index: 999999;
+            }
+
+            body {
+                overflow: hidden;
+            }
+        </style>
+    <?php
     }
 
     /**
@@ -103,7 +229,7 @@ class SCL_Shortcodes
         ));
 
         ob_start();
-?>
+    ?>
         <div class="scl-container"
             data-pagination-type="<?php echo esc_attr($atts['pagination_type']); ?>"
             data-per-page="<?php echo esc_attr($posts_per_page); ?>"
@@ -419,70 +545,231 @@ class SCL_Shortcodes
 
         $establecimientos = new WP_Query($args);
 
+        // Obtener promociones del usuario
+        $establecimiento_ids = array();
+        if ($establecimientos->have_posts()) {
+            while ($establecimientos->have_posts()) {
+                $establecimientos->the_post();
+                $establecimiento_ids[] = get_the_ID();
+            }
+            wp_reset_postdata();
+        }
+
+        $promociones_args = array(
+            'post_type'      => 'promocion',
+            'post_status'    => array('publish', 'pending', 'draft'),
+            'posts_per_page' => -1,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+        );
+
+        if (!empty($establecimiento_ids)) {
+            $promociones_args['meta_query'] = array(
+                array(
+                    'key'     => '_scl_establecimiento_id',
+                    'value'   => $establecimiento_ids,
+                    'compare' => 'IN',
+                ),
+            );
+        } else {
+            $promociones_args['post__in'] = array(0); // No resultados si no tiene establecimientos
+        }
+
+        $promociones = new WP_Query($promociones_args);
+
         ob_start();
     ?>
         <div class="scl-dashboard-wrapper">
-            <div class="scl-dashboard-header">
-                <h2><?php esc_html_e('Mis Establecimientos', 'simple-cards-listings'); ?></h2>
-                <button type="button" class="scl-btn scl-btn-primary scl-btn-nuevo">
-                    <?php esc_html_e('Solicitar nuevo establecimiento', 'simple-cards-listings'); ?>
+            <!-- Pestañas -->
+            <div class="scl-dashboard-tabs">
+                <button type="button" class="scl-tab-btn active" data-tab="establecimientos">
+                    <?php esc_html_e('Mis Establecimientos', 'simple-cards-listings'); ?>
+                </button>
+                <button type="button" class="scl-tab-btn" data-tab="promociones">
+                    <?php esc_html_e('Mis Promociones', 'simple-cards-listings'); ?>
+                    <span class="scl-tab-count"><?php echo $promociones->found_posts; ?></span>
                 </button>
             </div>
 
-            <?php if ($establecimientos->have_posts()) : ?>
-                <div class="scl-dashboard-table-wrapper">
-                    <table class="scl-dashboard-table">
-                        <thead>
-                            <tr>
-                                <th><?php esc_html_e('Logo', 'simple-cards-listings'); ?></th>
-                                <th><?php esc_html_e('Nombre', 'simple-cards-listings'); ?></th>
-                                <th><?php esc_html_e('Estado', 'simple-cards-listings'); ?></th>
-                                <th><?php esc_html_e('Fecha', 'simple-cards-listings'); ?></th>
-                                <th><?php esc_html_e('Acciones', 'simple-cards-listings'); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($establecimientos->have_posts()) : $establecimientos->the_post(); ?>
-                                <?php
-                                $post_id = get_the_ID();
-                                $status = get_post_status();
-                                $logo_id = SCL_Metaboxes::get_meta($post_id, 'logo');
-                                $logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'thumbnail') : '';
-                                ?>
+            <!-- Tab de Establecimientos -->
+            <div class="scl-tab-content active" data-tab="establecimientos">
+                <div class="scl-dashboard-header">
+                    <h2><?php esc_html_e('Mis Establecimientos', 'simple-cards-listings'); ?></h2>
+                    <button type="button" class="scl-btn scl-btn-primary scl-btn-nuevo">
+                        <?php esc_html_e('Solicitar nuevo establecimiento', 'simple-cards-listings'); ?>
+                    </button>
+                </div>
+
+                <?php if ($establecimientos->have_posts()) : ?>
+                    <?php $establecimientos->rewind_posts(); ?>
+                    <div class="scl-dashboard-table-wrapper">
+                        <table class="scl-dashboard-table">
+                            <thead>
                                 <tr>
-                                    <td class="scl-td-logo">
-                                        <?php if ($logo_url) : ?>
-                                            <img src="<?php echo esc_url($logo_url); ?>" alt="" width="50" height="50">
-                                        <?php else : ?>
-                                            <span class="scl-no-logo">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?php the_title(); ?></td>
-                                    <td>
-                                        <?php echo self::get_status_badge($status); ?>
-                                    </td>
-                                    <td><?php echo get_the_date(); ?></td>
-                                    <td class="scl-td-actions">
-                                        <button type="button" class="scl-btn scl-btn-small scl-btn-edit" data-id="<?php echo esc_attr($post_id); ?>">
-                                            <?php esc_html_e('Editar', 'simple-cards-listings'); ?>
-                                        </button>
-                                        <?php if ('publish' === $status) : ?>
-                                            <button type="button" class="scl-btn scl-btn-small scl-btn-view" data-id="<?php echo esc_attr($post_id); ?>">
-                                                <?php esc_html_e('Ver', 'simple-cards-listings'); ?>
-                                            </button>
-                                        <?php endif; ?>
-                                    </td>
+                                    <th><?php esc_html_e('Logo', 'simple-cards-listings'); ?></th>
+                                    <th><?php esc_html_e('Nombre', 'simple-cards-listings'); ?></th>
+                                    <th><?php esc_html_e('Estado', 'simple-cards-listings'); ?></th>
+                                    <th><?php esc_html_e('Fecha', 'simple-cards-listings'); ?></th>
+                                    <th><?php esc_html_e('Acciones', 'simple-cards-listings'); ?></th>
                                 </tr>
-                            <?php endwhile; ?>
-                            <?php wp_reset_postdata(); ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php while ($establecimientos->have_posts()) : $establecimientos->the_post(); ?>
+                                    <?php
+                                    $post_id = get_the_ID();
+                                    $status = get_post_status();
+                                    $logo_id = SCL_Metaboxes::get_meta($post_id, 'logo');
+                                    $logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'thumbnail') : '';
+                                    ?>
+                                    <tr>
+                                        <td class="scl-td-logo">
+                                            <?php if ($logo_url) : ?>
+                                                <img src="<?php echo esc_url($logo_url); ?>" alt="" width="50" height="50">
+                                            <?php else : ?>
+                                                <span class="scl-no-logo">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?php the_title(); ?></td>
+                                        <td>
+                                            <?php echo self::get_status_badge($status); ?>
+                                        </td>
+                                        <td><?php echo get_the_date(); ?></td>
+                                        <td class="scl-td-actions">
+                                            <button type="button" class="scl-btn scl-btn-small scl-btn-edit" data-id="<?php echo esc_attr($post_id); ?>">
+                                                <?php esc_html_e('Editar', 'simple-cards-listings'); ?>
+                                            </button>
+                                            <?php if ('publish' === $status) : ?>
+                                                <button type="button" class="scl-btn scl-btn-small scl-btn-view" data-id="<?php echo esc_attr($post_id); ?>">
+                                                    <?php esc_html_e('Ver', 'simple-cards-listings'); ?>
+                                                </button>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                                <?php wp_reset_postdata(); ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else : ?>
+                    <div class="scl-message scl-message-info">
+                        <?php esc_html_e('No tienes establecimientos registrados aún.', 'simple-cards-listings'); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Tab de Promociones -->
+            <div class="scl-tab-content" data-tab="promociones">
+                <div class="scl-dashboard-header">
+                    <h2><?php esc_html_e('Mis Promociones', 'simple-cards-listings'); ?></h2>
+                    <?php if (!empty($establecimiento_ids)) : ?>
+                        <button type="button" class="scl-btn scl-btn-primary" id="scl-btn-nueva-promocion">
+                            <?php esc_html_e('Crear Promoción', 'simple-cards-listings'); ?>
+                        </button>
+                    <?php endif; ?>
                 </div>
-            <?php else : ?>
-                <div class="scl-message scl-message-info">
-                    <?php esc_html_e('No tienes establecimientos registrados aún.', 'simple-cards-listings'); ?>
-                </div>
-            <?php endif; ?>
+
+                <?php if (!empty($establecimiento_ids)) : ?>
+                    <?php if ($promociones->have_posts()) : ?>
+                        <div class="scl-dashboard-table-wrapper">
+                            <table class="scl-dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th><?php esc_html_e('Imagen', 'simple-cards-listings'); ?></th>
+                                        <th><?php esc_html_e('Título', 'simple-cards-listings'); ?></th>
+                                        <th><?php esc_html_e('Establecimiento', 'simple-cards-listings'); ?></th>
+                                        <th><?php esc_html_e('Válida hasta', 'simple-cards-listings'); ?></th>
+                                        <th><?php esc_html_e('Estado', 'simple-cards-listings'); ?></th>
+                                        <th><?php esc_html_e('Acciones', 'simple-cards-listings'); ?></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($promociones->have_posts()) : $promociones->the_post(); ?>
+                                        <?php
+                                        $promo_id = get_the_ID();
+                                        $promo_status = get_post_status();
+                                        $imagen_url = get_the_post_thumbnail_url($promo_id, 'thumbnail');
+                                        $fecha_fin = get_post_meta($promo_id, '_scl_fecha_fin', true);
+                                        $establecimiento_id = get_post_meta($promo_id, '_scl_establecimiento_id', true);
+                                        $establecimiento_titulo = get_the_title($establecimiento_id);
+
+                                        // Determinar estado de la promoción
+                                        $ahora = current_time('timestamp');
+                                        $fin_ts = $fecha_fin ? strtotime($fecha_fin) : 0;
+                                        $estado_promo = 'activo';
+
+                                        if ($promo_status !== 'publish') {
+                                            $estado_promo = 'pendiente';
+                                        } elseif ($fin_ts > 0 && $fin_ts < $ahora) {
+                                            $estado_promo = 'expirado';
+                                        }
+                                        ?>
+                                        <tr>
+                                            <td class="scl-td-logo">
+                                                <?php if ($imagen_url) : ?>
+                                                    <img src="<?php echo esc_url($imagen_url); ?>" alt="" width="50" height="50">
+                                                <?php else : ?>
+                                                    <span class="scl-no-logo">📄</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?php the_title(); ?></td>
+                                            <td><?php echo esc_html($establecimiento_titulo); ?></td>
+                                            <td>
+                                                <?php
+                                                if ($fecha_fin) {
+                                                    echo date_i18n(get_option('date_format'), strtotime($fecha_fin));
+                                                } else {
+                                                    echo '-';
+                                                }
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                $badges = array(
+                                                    'activo' => array('label' => 'Activa', 'class' => 'scl-badge-success'),
+                                                    'expirado' => array('label' => 'Expirada', 'class' => 'scl-badge-danger'),
+                                                    'pendiente' => array('label' => 'Pendiente', 'class' => 'scl-badge-warning'),
+                                                );
+                                                $info = $badges[$estado_promo];
+                                                echo sprintf(
+                                                    '<span class="scl-badge %s">%s</span>',
+                                                    esc_attr($info['class']),
+                                                    esc_html($info['label'])
+                                                );
+                                                ?>
+                                            </td>
+                                            <td class="scl-td-actions">
+                                                <button type="button" class="scl-btn scl-btn-small scl-btn-editar-promocion" data-id="<?php echo esc_attr($promo_id); ?>">
+                                                    <?php esc_html_e('Editar', 'simple-cards-listings'); ?>
+                                                </button>
+                                                <?php if ($promo_status === 'publish') : ?>
+                                                    <button type="button" class="scl-btn scl-btn-small scl-ver-cupon" data-id="<?php echo esc_attr($promo_id); ?>">
+                                                        <?php esc_html_e('Ver', 'simple-cards-listings'); ?>
+                                                    </button>
+                                                <?php endif; ?>
+                                                <button type="button" class="scl-btn scl-btn-small scl-btn-danger scl-btn-eliminar-promocion" data-id="<?php echo esc_attr($promo_id); ?>">
+                                                    <?php esc_html_e('Eliminar', 'simple-cards-listings'); ?>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                    <?php wp_reset_postdata(); ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else : ?>
+                        <div class="scl-message scl-message-info">
+                            <?php esc_html_e('No tienes promociones creadas aún.', 'simple-cards-listings'); ?>
+                            <button type="button" id="scl-btn-nueva-promocion-inline" class="scl-btn scl-btn-primary" style="margin-left: 10px;">
+                                <?php esc_html_e('Crear tu primera promoción', 'simple-cards-listings'); ?>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                <?php else : ?>
+                    <div class="scl-message scl-message-warning">
+                        <?php esc_html_e('Debes tener al menos un establecimiento registrado para crear promociones.', 'simple-cards-listings'); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
 
             <!-- Modal de solicitud de nuevo establecimiento -->
             <div id="scl-solicitud-modal" class="scl-modal" style="display: none;">
@@ -515,8 +802,94 @@ class SCL_Shortcodes
                     </div>
                 </div>
             </div>
+
+            <!-- Modal de Promoción (Crear/Editar) -->
+            <div id="scl-promocion-modal" class="scl-modal" style="display: none;">
+                <div class="scl-modal-overlay"></div>
+                <div class="scl-modal-content scl-modal-large">
+                    <button type="button" class="scl-modal-close" aria-label="<?php esc_attr_e('Cerrar', 'simple-cards-listings'); ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18"></path>
+                            <path d="m6 6 12 12"></path>
+                        </svg>
+                    </button>
+                    <div class="scl-modal-body">
+                        <h3 id="scl-promocion-modal-titulo"><?php esc_html_e('Nueva Promoción', 'simple-cards-listings'); ?></h3>
+                        <form id="scl-promocion-form" enctype="multipart/form-data">
+                            <input type="hidden" id="scl-promocion-id" name="promocion_id" value="">
+
+                            <div class="scl-form-row">
+                                <label for="scl-promo-titulo"><?php esc_html_e('Título de la Promoción *', 'simple-cards-listings'); ?></label>
+                                <input type="text" id="scl-promo-titulo" name="titulo" required placeholder="<?php esc_attr_e('Ej: 2×1 en hamburguesas', 'simple-cards-listings'); ?>">
+                            </div>
+
+                            <div class="scl-form-row">
+                                <label for="scl-promo-descripcion"><?php esc_html_e('Descripción *', 'simple-cards-listings'); ?></label>
+                                <textarea id="scl-promo-descripcion" name="descripcion" rows="5" required placeholder="<?php esc_attr_e('Describe los detalles de la promoción...', 'simple-cards-listings'); ?>"></textarea>
+                            </div>
+
+                            <div class="scl-form-row">
+                                <label for="scl-promo-establecimiento"><?php esc_html_e('Establecimiento *', 'simple-cards-listings'); ?></label>
+                                <select id="scl-promo-establecimiento" name="establecimiento_id" required>
+                                    <option value=""><?php esc_html_e('Seleccionar establecimiento', 'simple-cards-listings'); ?></option>
+                                    <?php
+                                    $user_establecimientos = get_posts(array(
+                                        'post_type' => 'establecimiento',
+                                        'author' => $user_id,
+                                        'post_status' => 'publish',
+                                        'posts_per_page' => -1,
+                                        'orderby' => 'title',
+                                        'order' => 'ASC',
+                                    ));
+                                    foreach ($user_establecimientos as $est) :
+                                    ?>
+                                        <option value="<?php echo esc_attr($est->ID); ?>"><?php echo esc_html($est->post_title); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="scl-form-row">
+                                <label for="scl-promo-imagen"><?php esc_html_e('Imagen de la Promoción', 'simple-cards-listings'); ?></label>
+                                <input type="file" id="scl-promo-imagen" name="imagen" accept="image/*">
+                                <div id="scl-promo-imagen-preview" style="margin-top: 10px; display: none;">
+                                    <img src="" alt="" style="max-width: 200px; height: auto; border-radius: 8px;">
+                                </div>
+                            </div>
+
+                            <div class="scl-form-row scl-form-row-inline">
+                                <div class="scl-form-col">
+                                    <label for="scl-promo-fecha-inicio"><?php esc_html_e('Fecha de Inicio *', 'simple-cards-listings'); ?></label>
+                                    <input type="datetime-local" id="scl-promo-fecha-inicio" name="fecha_inicio" required>
+                                </div>
+                                <div class="scl-form-col">
+                                    <label for="scl-promo-fecha-fin"><?php esc_html_e('Fecha de Fin *', 'simple-cards-listings'); ?></label>
+                                    <input type="datetime-local" id="scl-promo-fecha-fin" name="fecha_fin" required>
+                                </div>
+                            </div>
+
+                            <div class="scl-form-row">
+                                <label class="scl-checkbox-label">
+                                    <input type="checkbox" id="scl-promo-destacado" name="destacado" value="1">
+                                    <?php esc_html_e('Marcar como promoción destacada', 'simple-cards-listings'); ?>
+                                </label>
+                            </div>
+
+                            <div class="scl-form-row">
+                                <button type="submit" class="scl-btn scl-btn-primary" id="scl-promo-submit">
+                                    <?php esc_html_e('Guardar Promoción', 'simple-cards-listings'); ?>
+                                </button>
+                                <button type="button" class="scl-btn scl-btn-secondary scl-modal-close">
+                                    <?php esc_html_e('Cancelar', 'simple-cards-listings'); ?>
+                                </button>
+                            </div>
+
+                            <div id="scl-promo-form-message" class="scl-form-message" style="display: none;"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
-<?php
+    <?php
         return ob_get_clean();
     }
 
@@ -557,5 +930,166 @@ class SCL_Shortcodes
             esc_attr($info['class']),
             esc_html($info['label'])
         );
+    }
+
+    /**
+     * Shortcode: Grid de promociones
+     * [scl_cupones columns="3" per_page="12" search_placeholder=""]
+     *
+     * @param array $atts Atributos del shortcode.
+     * @return string
+     */
+    public static function render_cupones_grid($atts)
+    {
+        $atts = shortcode_atts(array(
+            'columns'            => 3,
+            'per_page'           => 12,
+            'search_placeholder' => '',
+        ), $atts, 'scl_cupones');
+
+        $posts_per_page = intval($atts['per_page']);
+        if ($posts_per_page <= 0) {
+            $posts_per_page = 12;
+        }
+
+        // Query simple - traer todas las promociones publicadas
+        $args = array(
+            'post_type'      => 'promocion',
+            'post_status'    => 'publish',
+            'posts_per_page' => $posts_per_page,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+        );
+
+        $cupones = new WP_Query($args);
+
+        ob_start();
+    ?>
+        <div class="scl-cupones-container">
+            <!-- Buscador -->
+            <div class="scl-search-wrapper">
+                <div class="scl-search-box">
+                    <input
+                        type="text"
+                        id="scl-cupones-search"
+                        class="scl-search-input"
+                        placeholder="<?php echo esc_attr(!empty($atts['search_placeholder']) ? $atts['search_placeholder'] : __('Buscar promociones...', 'simple-cards-listings')); ?>"
+                        autocomplete="off">
+                    <button type="button" class="scl-search-button" aria-label="<?php esc_attr_e('Buscar', 'simple-cards-listings'); ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid de cupones -->
+            <div class="scl-cupones-grid scl-grid-<?php echo esc_attr($atts['columns']); ?>" id="scl-cupones-grid">
+                <?php if ($cupones->have_posts()) : ?>
+                    <?php while ($cupones->have_posts()) : $cupones->the_post(); ?>
+                        <?php echo self::render_cupon_card(get_the_ID()); ?>
+                    <?php endwhile; ?>
+                    <?php wp_reset_postdata(); ?>
+                <?php else : ?>
+                    <p class="scl-no-results"><?php esc_html_e('No hay promociones activas en este momento.', 'simple-cards-listings'); ?></p>
+                <?php endif; ?>
+            </div>
+
+            <!-- Mensaje de no resultados -->
+            <div id="scl-cupones-no-results" class="scl-no-results" style="display: none;">
+                <?php esc_html_e('No se encontraron promociones.', 'simple-cards-listings'); ?>
+            </div>
+        </div>
+
+        <!-- Modal de cupón -->
+        <div id="scl-cupon-modal" class="scl-modal" style="display: none;">
+            <div class="scl-modal-overlay"></div>
+            <div class="scl-modal-content scl-cupon-modal-content">
+                <button type="button" class="scl-modal-close" aria-label="<?php esc_attr_e('Cerrar', 'simple-cards-listings'); ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+                <div class="scl-modal-body" id="scl-cupon-modal-body">
+                    <!-- Contenido cargado via AJAX -->
+                </div>
+            </div>
+        </div>
+    <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Renderizar card de cupón
+     *
+     * @param int $post_id ID del cupón.
+     * @return string
+     */
+    public static function render_cupon_card($post_id)
+    {
+        $imagen_url = get_the_post_thumbnail_url($post_id, 'medium');
+        if (!$imagen_url) {
+            $imagen_url = SCL_PLUGIN_URL . 'assets/images/cupon-placeholder.png';
+        }
+
+        $establecimiento_id = get_post_meta($post_id, '_scl_establecimiento_id', true);
+        $establecimiento_nombre = '';
+        if ($establecimiento_id) {
+            $est = get_post($establecimiento_id);
+            if ($est) {
+                $establecimiento_nombre = $est->post_title;
+            }
+        }
+
+        $fecha_fin = get_post_meta($post_id, '_scl_fecha_fin', true);
+        $destacado = get_post_meta($post_id, '_scl_destacado', true);
+
+        $dias_restantes = '';
+        if ($fecha_fin) {
+            $fin_timestamp = strtotime($fecha_fin);
+            $ahora = current_time('timestamp');
+            $diff = $fin_timestamp - $ahora;
+            $dias = floor($diff / DAY_IN_SECONDS);
+
+            if ($dias == 0) {
+                $dias_restantes = __('Expira hoy', 'simple-cards-listings');
+            } elseif ($dias == 1) {
+                $dias_restantes = __('Expira mañana', 'simple-cards-listings');
+            } elseif ($dias > 1) {
+                $dias_restantes = sprintf(__('Expira en %d días', 'simple-cards-listings'), $dias);
+            }
+        }
+
+        ob_start();
+    ?>
+        <div class="scl-cupon-card" data-id="<?php echo esc_attr($post_id); ?>" <?php echo $destacado == '1' ? 'data-destacado="1"' : ''; ?>>
+            <?php if ($destacado == '1') : ?>
+                <div class="scl-cupon-badge-destacado">⭐ <?php esc_html_e('Destacado', 'simple-cards-listings'); ?></div>
+            <?php endif; ?>
+
+            <div class="scl-cupon-imagen">
+                <img src="<?php echo esc_url($imagen_url); ?>" alt="<?php echo esc_attr(get_the_title($post_id)); ?>">
+            </div>
+
+            <div class="scl-cupon-info">
+                <?php if ($establecimiento_nombre) : ?>
+                    <div class="scl-cupon-establecimiento"><?php echo esc_html($establecimiento_nombre); ?></div>
+                <?php endif; ?>
+
+                <h3 class="scl-cupon-titulo"><?php echo esc_html(get_the_title($post_id)); ?></h3>
+
+                <?php if ($dias_restantes) : ?>
+                    <div class="scl-cupon-expira"><?php echo esc_html($dias_restantes); ?></div>
+                <?php endif; ?>
+
+                <button type="button" class="scl-btn scl-btn-primary scl-ver-cupon">
+                    <?php esc_html_e('Ver cupón', 'simple-cards-listings'); ?>
+                </button>
+            </div>
+        </div>
+<?php
+        return ob_get_clean();
     }
 }

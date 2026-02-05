@@ -42,6 +42,51 @@ class SCL_Ajax_Handlers
 
         // Actualizar establecimiento
         add_action('wp_ajax_scl_update_establecimiento', array(__CLASS__, 'update_establecimiento'));
+
+        // CUPONES: Modal de cupón
+        add_action('wp_ajax_scl_get_cupon', array(__CLASS__, 'get_cupon'));
+        add_action('wp_ajax_nopriv_scl_get_cupon', array(__CLASS__, 'get_cupon'));
+
+        // CUPONES: Búsqueda
+        add_action('wp_ajax_scl_search_cupones', array(__CLASS__, 'search_cupones'));
+        add_action('wp_ajax_nopriv_scl_search_cupones', array(__CLASS__, 'search_cupones'));
+
+        // CUPONES: Crear/editar desde frontend
+        add_action('wp_ajax_scl_submit_cupon', array(__CLASS__, 'submit_cupon'));
+        add_action('wp_ajax_scl_delete_cupon', array(__CLASS__, 'delete_cupon'));
+        add_action('wp_ajax_scl_get_promocion_meta', array(__CLASS__, 'get_promocion_meta'));
+    }
+
+    /**
+     * Obtener meta datos de una promoción (fechas)
+     */
+    public static function get_promocion_meta()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Debes iniciar sesión.', 'simple-cards-listings')));
+        }
+
+        $promocion_id = isset($_POST['promocion_id']) ? intval($_POST['promocion_id']) : 0;
+
+        if (!$promocion_id || get_post_type($promocion_id) !== 'promocion') {
+            wp_send_json_error(array('message' => __('Promoción no encontrada.', 'simple-cards-listings')));
+        }
+
+        // Verificar permisos
+        if (!current_user_can('edit_post', $promocion_id)) {
+            wp_send_json_error(array('message' => __('No tienes permisos.', 'simple-cards-listings')));
+        }
+
+        $data = array(
+            'fecha_inicio' => get_post_meta($promocion_id, '_scl_fecha_inicio', true),
+            'fecha_fin' => get_post_meta($promocion_id, '_scl_fecha_fin', true),
+            'establecimiento_id' => get_post_meta($promocion_id, '_scl_establecimiento_id', true),
+            'destacado' => get_post_meta($promocion_id, '_scl_destacado', true),
+        );
+
+        wp_send_json_success($data);
     }
 
     /**
@@ -899,5 +944,282 @@ class SCL_Ajax_Handlers
             'has_more' => $query->max_num_pages > $page,
             'max_pages' => $query->max_num_pages,
         ));
+    }
+
+    /**
+     * CUPONES: Obtener datos de un cupón para el modal
+     */
+    public static function get_cupon()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
+
+        $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+
+        if (!$post_id || get_post_type($post_id) !== 'promocion') {
+            wp_send_json_error(array('message' => __('Promoción no encontrada.', 'simple-cards-listings')));
+        }
+
+        $cupon = get_post($post_id);
+        if (!$cupon || $cupon->post_status !== 'publish') {
+            wp_send_json_error(array('message' => __('Cupón no disponible.', 'simple-cards-listings')));
+        }
+
+        // Obtener datos del establecimiento
+        $establecimiento_id = get_post_meta($post_id, '_scl_establecimiento_id', true);
+        $establecimiento = null;
+        if ($establecimiento_id) {
+            $est = get_post($establecimiento_id);
+            if ($est) {
+                $establecimiento = array(
+                    'id' => $est->ID,
+                    'titulo' => $est->post_title,
+                    'url' => get_permalink($est->ID),
+                );
+            }
+        }
+
+        // Fechas
+        $fecha_inicio = get_post_meta($post_id, '_scl_fecha_inicio', true);
+        $fecha_fin = get_post_meta($post_id, '_scl_fecha_fin', true);
+
+        // Imagen
+        $imagen_url = get_the_post_thumbnail_url($post_id, 'large');
+        if (!$imagen_url) {
+            $imagen_url = SCL_PLUGIN_URL . 'assets/images/cupon-placeholder.png';
+        }
+
+        // URL para compartir
+        $share_url = add_query_arg('cupon_id', $post_id, home_url('/'));
+
+        $data = array(
+            'id' => $post_id,
+            'titulo' => $cupon->post_title,
+            'descripcion' => wpautop($cupon->post_content),
+            'imagen' => $imagen_url,
+            'fecha_inicio' => $fecha_inicio ? date_i18n(get_option('date_format'), strtotime($fecha_inicio)) : '',
+            'fecha_fin' => $fecha_fin ? date_i18n(get_option('date_format'), strtotime($fecha_fin)) : '',
+            'destacado' => get_post_meta($post_id, '_scl_destacado', true) == '1',
+            'establecimiento' => $establecimiento,
+            'share_url' => $share_url,
+        );
+
+        wp_send_json_success(array('cupon' => $data));
+    }
+
+    /**
+     * CUPONES: Búsqueda de promociones
+     */
+    public static function search_cupones()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
+
+        $search_term = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+
+        // Formato de datetime-local: YYYY-MM-DDTHH:MM
+        $ahora = current_time('Y-m-d\TH:i');
+
+        // Query base
+        $args = array(
+            'post_type' => 'promocion',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+        );
+
+        // Meta query con OR para manejar campos vacíos
+        $meta_query = array('relation' => 'AND');
+
+        // Filtrar que no haya expirado
+        $meta_query[] = array(
+            'relation' => 'OR',
+            array(
+                'key' => '_scl_fecha_fin',
+                'value' => $ahora,
+                'compare' => '>=',
+                'type' => 'CHAR',
+            ),
+            array(
+                'key' => '_scl_fecha_fin',
+                'compare' => 'NOT EXISTS',
+            ),
+        );
+
+        // Filtrar que ya haya iniciado
+        $meta_query[] = array(
+            'relation' => 'OR',
+            array(
+                'key' => '_scl_fecha_inicio',
+                'value' => $ahora,
+                'compare' => '<=',
+                'type' => 'CHAR',
+            ),
+            array(
+                'key' => '_scl_fecha_inicio',
+                'compare' => 'NOT EXISTS',
+            ),
+        );
+
+        $args['meta_query'] = $meta_query;
+
+        // Si hay búsqueda, buscar en título, contenido y establecimiento
+        if (!empty($search_term)) {
+            $args['s'] = $search_term;
+
+            // También buscar por establecimiento
+            $est_query = new WP_Query(array(
+                'post_type' => 'establecimiento',
+                's' => $search_term,
+                'posts_per_page' => -1,
+                'fields' => 'ids',
+            ));
+
+            if ($est_query->have_posts()) {
+                $args['meta_query'][] = array(
+                    'key' => '_scl_establecimiento_id',
+                    'value' => $est_query->posts,
+                    'compare' => 'IN',
+                );
+            }
+        }
+
+        $query = new WP_Query($args);
+        $html = '';
+
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $html .= SCL_Shortcodes::render_cupon_card(get_the_ID());
+            }
+            wp_reset_postdata();
+        }
+
+        wp_send_json_success(array(
+            'html' => $html,
+            'found' => $query->found_posts,
+        ));
+    }
+
+    /**
+     * CUPONES: Crear o editar cupón desde frontend
+     */
+    public static function submit_cupon()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Debes iniciar sesión.', 'simple-cards-listings')));
+        }
+
+        $cupon_id = isset($_POST['cupon_id']) ? intval($_POST['cupon_id']) : 0;
+        $establecimiento_id = isset($_POST['establecimiento_id']) ? intval($_POST['establecimiento_id']) : 0;
+        $titulo = isset($_POST['titulo']) ? sanitize_text_field($_POST['titulo']) : '';
+        $descripcion = isset($_POST['descripcion']) ? wp_kses_post($_POST['descripcion']) : '';
+        $fecha_inicio = isset($_POST['fecha_inicio']) ? sanitize_text_field($_POST['fecha_inicio']) : '';
+        $fecha_fin = isset($_POST['fecha_fin']) ? sanitize_text_field($_POST['fecha_fin']) : '';
+        $destacado = isset($_POST['destacado']) ? '1' : '0';
+
+        // Validar establecimiento
+        if (!$establecimiento_id || get_post_type($establecimiento_id) !== 'establecimiento') {
+            wp_send_json_error(array('message' => __('Establecimiento no válido.', 'simple-cards-listings')));
+        }
+
+        // Verificar permisos
+        if (!current_user_can('edit_post', $establecimiento_id)) {
+            wp_send_json_error(array('message' => __('No tienes permisos para este establecimiento.', 'simple-cards-listings')));
+        }
+
+        // Validar fechas
+        if (empty($fecha_inicio) || empty($fecha_fin)) {
+            wp_send_json_error(array('message' => __('Las fechas son obligatorias.', 'simple-cards-listings')));
+        }
+
+        $inicio_ts = strtotime($fecha_inicio);
+        $fin_ts = strtotime($fecha_fin);
+
+        if ($fin_ts <= $inicio_ts) {
+            wp_send_json_error(array('message' => __('La fecha de fin debe ser posterior a la de inicio.', 'simple-cards-listings')));
+        }
+
+        // Si es edición, validar permisos
+        if ($cupon_id) {
+            if (!current_user_can('edit_post', $cupon_id)) {
+                wp_send_json_error(array('message' => __('No puedes editar esta promoción.', 'simple-cards-listings')));
+            }
+
+            $post_data = array(
+                'ID' => $cupon_id,
+                'post_title' => $titulo,
+                'post_content' => $descripcion,
+            );
+
+            wp_update_post($post_data);
+        } else {
+            // Crear nueva promoción
+            $post_data = array(
+                'post_type' => 'promocion',
+                'post_title' => $titulo,
+                'post_content' => $descripcion,
+                'post_status' => 'publish', // O 'pending' si requiere aprobación
+                'post_author' => get_current_user_id(),
+            );
+
+            $cupon_id = wp_insert_post($post_data);
+
+            if (is_wp_error($cupon_id)) {
+                wp_send_json_error(array('message' => $cupon_id->get_error_message()));
+            }
+        }
+
+        // Actualizar meta
+        update_post_meta($cupon_id, '_scl_establecimiento_id', $establecimiento_id);
+        update_post_meta($cupon_id, '_scl_fecha_inicio', $fecha_inicio);
+        update_post_meta($cupon_id, '_scl_fecha_fin', $fecha_fin);
+        update_post_meta($cupon_id, '_scl_destacado', $destacado);
+
+        // Manejar imagen si se subió
+        if (!empty($_FILES['imagen']['name'])) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+
+            $attachment_id = media_handle_upload('imagen', $cupon_id);
+            if (!is_wp_error($attachment_id)) {
+                set_post_thumbnail($cupon_id, $attachment_id);
+            }
+        }
+
+        wp_send_json_success(array(
+            'message' => __('Cupón guardado exitosamente.', 'simple-cards-listings'),
+            'cupon_id' => $cupon_id,
+        ));
+    }
+
+    /**
+     * CUPONES: Eliminar cupón
+     */
+    public static function delete_cupon()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Debes iniciar sesión.', 'simple-cards-listings')));
+        }
+
+        $cupon_id = isset($_POST['cupon_id']) ? intval($_POST['cupon_id']) : 0;
+
+        if (!$cupon_id || get_post_type($cupon_id) !== 'promocion') {
+            wp_send_json_error(array('message' => __('Promoción no encontrada.', 'simple-cards-listings')));
+        }
+
+        if (!current_user_can('delete_post', $cupon_id)) {
+            wp_send_json_error(array('message' => __('No tienes permisos para eliminar esta promoción.', 'simple-cards-listings')));
+        }
+
+        $deleted = wp_delete_post($cupon_id, true);
+
+        if (!$deleted) {
+            wp_send_json_error(array('message' => __('Error al eliminar el cupón.', 'simple-cards-listings')));
+        }
+
+        wp_send_json_success(array('message' => __('Cupón eliminado exitosamente.', 'simple-cards-listings')));
     }
 }

@@ -26,6 +26,7 @@ class SCL_User_Dashboard
         // Esta clase maneja funcionalidades adicionales del dashboard
 
         add_action('wp_ajax_scl_get_user_stats', array(__CLASS__, 'get_user_stats'));
+        add_action('wp_ajax_scl_get_user_cupones', array(__CLASS__, 'get_user_cupones'));
     }
 
     /**
@@ -138,5 +139,95 @@ class SCL_User_Dashboard
     public static function user_has_establecimientos($user_id)
     {
         return self::count_user_posts($user_id) > 0;
+    }
+
+    /**
+     * Obtener cupones del usuario (de todos sus establecimientos)
+     */
+    public static function get_user_cupones()
+    {
+        check_ajax_referer('scl_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Debes iniciar sesión.', 'simple-cards-listings')));
+        }
+
+        $user_id = get_current_user_id();
+
+        // Obtener IDs de establecimientos del usuario
+        $establecimientos_query = new WP_Query(array(
+            'post_type' => 'establecimiento',
+            'author' => $user_id,
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+        ));
+
+        $establecimiento_ids = $establecimientos_query->posts;
+
+        if (empty($establecimiento_ids)) {
+            wp_send_json_success(array(
+                'cupones' => array(),
+                'total' => 0,
+            ));
+        }
+
+        // Obtener cupones de esos establecimientos
+        $cupones_query = new WP_Query(array(
+            'post_type' => 'promocion',
+            'posts_per_page' => -1,
+            'meta_query' => array(
+                array(
+                    'key' => '_scl_establecimiento_id',
+                    'value' => $establecimiento_ids,
+                    'compare' => 'IN',
+                ),
+            ),
+            'orderby' => 'date',
+            'order' => 'DESC',
+        ));
+
+        $cupones = array();
+
+        if ($cupones_query->have_posts()) {
+            while ($cupones_query->have_posts()) {
+                $cupones_query->the_post();
+                $cupon_id = get_the_ID();
+
+                $establecimiento_id = get_post_meta($cupon_id, '_scl_establecimiento_id', true);
+                $establecimiento = get_post($establecimiento_id);
+
+                $fecha_inicio = get_post_meta($cupon_id, '_scl_fecha_inicio', true);
+                $fecha_fin = get_post_meta($cupon_id, '_scl_fecha_fin', true);
+
+                $ahora = current_time('timestamp');
+                $fin_ts = $fecha_fin ? strtotime($fecha_fin) : 0;
+                $estado = 'activo';
+
+                if ($fin_ts > 0 && $fin_ts < $ahora) {
+                    $estado = 'expirado';
+                } elseif (get_post_status($cupon_id) !== 'publish') {
+                    $estado = 'pendiente';
+                }
+
+                $cupones[] = array(
+                    'id' => $cupon_id,
+                    'titulo' => get_the_title(),
+                    'establecimiento' => $establecimiento ? $establecimiento->post_title : '',
+                    'fecha_inicio' => $fecha_inicio ? date_i18n(get_option('date_format'), strtotime($fecha_inicio)) : '',
+                    'fecha_fin' => $fecha_fin ? date_i18n(get_option('date_format'), strtotime($fecha_fin)) : '',
+                    'destacado' => get_post_meta($cupon_id, '_scl_destacado', true) == '1',
+                    'imagen_url' => get_the_post_thumbnail_url($cupon_id, 'thumbnail'),
+                    'estado' => $estado,
+                    'can_edit' => current_user_can('edit_post', $cupon_id),
+                    'can_delete' => current_user_can('delete_post', $cupon_id),
+                );
+            }
+            wp_reset_postdata();
+        }
+
+        wp_send_json_success(array(
+            'cupones' => $cupones,
+            'total' => count($cupones),
+        ));
     }
 }

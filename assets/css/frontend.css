@@ -627,6 +627,56 @@
   padding: 20px;
 }
 
+/* Pestañas del Dashboard */
+.scl-dashboard-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--scl-border-color);
+}
+
+.scl-tab-btn {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--scl-text-light);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: var(--scl-transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scl-tab-btn:hover {
+  color: var(--scl-primary-color);
+}
+
+.scl-tab-btn.active {
+  color: var(--scl-primary-color);
+  border-bottom-color: var(--scl-primary-color);
+}
+
+.scl-tab-count {
+  background: var(--scl-primary-color);
+  color: var(--scl-white);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scl-tab-content {
+  display: none;
+}
+
+.scl-tab-content.active {
+  display: block;
+}
+
 .scl-dashboard-header {
   display: flex;
   justify-content: space-between;
@@ -790,7 +840,6 @@
   width: auto !important;
 }
 
-
 /* ==========================================================================
    Pagination Wrapper
    ========================================================================== */
@@ -896,5 +945,388 @@
     height: 36px;
     padding: 6px 10px;
     font-size: 14px;
+  }
+}
+
+/* ==========================================================================
+   CUPONES - Grid de Cupones
+   ========================================================================== */
+.scl-cupones-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.scl-cupones-grid {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.scl-cupones-grid.scl-grid-2 {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.scl-cupones-grid.scl-grid-3 {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.scl-cupones-grid.scl-grid-4 {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+/* Cupón Card */
+.scl-cupon-card {
+  background: var(--scl-white);
+  border-radius: var(--scl-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--scl-shadow);
+  transition: var(--scl-transition);
+  position: relative;
+  cursor: pointer;
+}
+
+.scl-cupon-card:hover {
+  box-shadow: var(--scl-shadow-lg);
+  transform: translateY(-4px);
+}
+
+.scl-cupon-card[data-destacado="1"] {
+  border: 2px solid var(--scl-warning-color);
+}
+
+.scl-cupon-badge-destacado {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--scl-warning-color);
+  color: var(--scl-white);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.scl-cupon-imagen {
+  position: relative;
+  width: 100%;
+  padding-top: 60%; /* Aspect ratio 5:3 */
+  overflow: hidden;
+  background: var(--scl-background);
+}
+
+.scl-cupon-imagen img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scl-cupon-info {
+  padding: 20px;
+}
+
+.scl-cupon-establecimiento {
+  font-size: 13px;
+  color: var(--scl-text-light);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.scl-cupon-titulo {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--scl-text-color);
+  line-height: 1.3;
+}
+
+.scl-cupon-expira {
+  font-size: 14px;
+  color: var(--scl-danger-color);
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scl-ver-cupon {
+  width: 100%;
+  padding: 12px 24px;
+  background: var(--scl-primary-color);
+  color: var(--scl-white);
+  border: none;
+  border-radius: var(--scl-radius);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--scl-transition);
+}
+
+.scl-ver-cupon:hover {
+  background: var(--scl-primary-hover);
+}
+
+/* ==========================================================================
+   CUPONES - Modal
+   ========================================================================== */
+.scl-cupon-modal-content {
+  max-width: 700px;
+  width: 90%;
+}
+
+.scl-cupon-modal-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.scl-cupon-modal-imagen {
+  position: relative;
+  width: 100%;
+  border-radius: var(--scl-radius-lg);
+  overflow: hidden;
+}
+
+.scl-cupon-modal-imagen img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.scl-cupon-modal-info {
+  padding: 0 4px;
+}
+
+.scl-cupon-modal-info .scl-cupon-establecimiento {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.scl-cupon-modal-info .scl-cupon-establecimiento a {
+  color: var(--scl-primary-color);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.scl-cupon-modal-info .scl-cupon-establecimiento a:hover {
+  text-decoration: underline;
+}
+
+.scl-cupon-modal-titulo {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 16px;
+  color: var(--scl-text-color);
+  line-height: 1.2;
+}
+
+.scl-cupon-modal-descripcion {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--scl-text-color);
+  margin-bottom: 20px;
+}
+
+.scl-cupon-modal-descripcion p {
+  margin: 0 0 12px;
+}
+
+.scl-cupon-fechas {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: var(--scl-radius);
+  margin-bottom: 20px;
+}
+
+.scl-cupon-fecha {
+  font-size: 14px;
+  color: var(--scl-text-color);
+  margin-bottom: 8px;
+}
+
+.scl-cupon-fecha:last-child {
+  margin-bottom: 0;
+}
+
+.scl-cupon-fecha strong {
+  color: var(--scl-text-color);
+  font-weight: 600;
+}
+
+.scl-cupon-acciones {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.scl-cupon-acciones .scl-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.scl-btn-secondary {
+  background: #e5e7eb;
+  color: var(--scl-text-color);
+}
+
+.scl-btn-secondary:hover {
+  background: #d1d5db;
+}
+
+/* ==========================================================================
+   CUPONES - Notificaciones
+   ========================================================================== */
+.scl-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--scl-text-color);
+  color: var(--scl-white);
+  padding: 16px 24px;
+  border-radius: var(--scl-radius);
+  box-shadow: var(--scl-shadow-lg);
+  z-index: 10000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.scl-notification-show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scl-notification-success {
+  background: var(--scl-success-color);
+}
+
+.scl-notification-error {
+  background: var(--scl-danger-color);
+}
+
+.scl-notification-warning {
+  background: var(--scl-warning-color);
+}
+
+/* Loading spinner */
+.scl-loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+.scl-loading-spinner::after {
+  content: "";
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--scl-border-color);
+  border-top-color: var(--scl-primary-color);
+  border-radius: 50%;
+  animation: scl-spin 0.8s linear infinite;
+}
+
+@keyframes scl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading state para grid */
+.scl-cupones-grid.scl-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Responsive - Cupones
+   ========================================================================== */
+@media (max-width: 768px) {
+  .scl-cupones-grid.scl-grid-2,
+  .scl-cupones-grid.scl-grid-3,
+  .scl-cupones-grid.scl-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .scl-cupon-modal-content {
+    width: 95%;
+    max-width: 500px;
+  }
+
+  .scl-cupon-modal-titulo {
+    font-size: 22px;
+  }
+
+  .scl-cupon-acciones {
+    flex-direction: column;
+  }
+
+  .scl-notification {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    text-align: center;
+  }
+}
+
+/* ==========================================================================
+   Formulario de Promoción
+   ========================================================================== */
+#scl-promocion-modal .scl-modal-body {
+  padding: 30px;
+}
+
+#scl-promocion-modal-titulo {
+  margin: 0 0 25px 0;
+  font-size: 24px;
+  color: var(--scl-text-color);
+}
+
+.scl-form-row-inline {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.scl-form-col {
+  display: flex;
+  flex-direction: column;
+}
+
+#scl-promo-imagen-preview {
+  margin-top: 15px;
+  padding: 10px;
+  background: var(--scl-background);
+  border-radius: var(--scl-radius);
+  text-align: center;
+}
+
+#scl-promo-imagen-preview img {
+  max-width: 200px;
+  height: auto;
+  border-radius: var(--scl-radius);
+  box-shadow: var(--scl-shadow);
+}
+
+.scl-btn-danger {
+  background-color: var(--scl-danger-color);
+  color: var(--scl-white);
+}
+
+.scl-btn-danger:hover {
+  background-color: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .scl-form-row-inline {
+    grid-template-columns: 1fr;
   }
 }
