@@ -701,8 +701,8 @@
         $(e.target).hasClass("scl-modal-close") ||
         $(e.target).closest(".scl-modal-close").length
       ) {
-        $("#scl-modal").hide();
-        $("body").css("overflow", "");
+        $("#scl-modal, #scl-promocion-modal").hide();
+        $("body").removeClass("scl-modal-open").css("overflow", "");
       }
     },
 
