@@ -46,6 +46,7 @@ class SCL_Admin
         add_action('admin_init', array($this, 'register_settings'));
         add_filter('manage_establecimiento_posts_columns', array($this, 'add_custom_columns'));
         add_action('manage_establecimiento_posts_custom_column', array($this, 'render_custom_columns'), 10, 2);
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
     }
 
     /**
@@ -72,6 +73,26 @@ class SCL_Admin
             'scl-logs',
             array($this, 'render_logs_page')
         );
+    }
+
+    /**
+     * Encolar scripts y estilos del admin
+     *
+     * @param string $hook Current page hook.
+     */
+    public function enqueue_admin_assets($hook)
+    {
+        // Solo cargar en la página de configuración
+        if ('establecimiento_page_scl-settings' !== $hook) {
+            return;
+        }
+
+        // Encolar color picker
+        wp_enqueue_style('wp-color-picker');
+        wp_enqueue_script('wp-color-picker');
+
+        // Encolar media uploader
+        wp_enqueue_media();
     }
 
     /**
@@ -118,6 +139,41 @@ class SCL_Admin
             'scl_settings',
             'scl_general_section'
         );
+
+        // Sección de personalización de modales
+        add_settings_section(
+            'scl_modal_section',
+            __('Personalización de Modales', 'simple-cards-listings'),
+            array($this, 'render_modal_section'),
+            'scl_settings'
+        );
+
+        // Campo: tipo de fondo del modal
+        add_settings_field(
+            'scl_modal_background_type',
+            __('Tipo de fondo del modal', 'simple-cards-listings'),
+            array($this, 'render_modal_background_type_field'),
+            'scl_settings',
+            'scl_modal_section'
+        );
+
+        // Campo: color de fondo del modal
+        add_settings_field(
+            'scl_modal_background_color',
+            __('Color de fondo', 'simple-cards-listings'),
+            array($this, 'render_modal_background_color_field'),
+            'scl_settings',
+            'scl_modal_section'
+        );
+
+        // Campo: imagen de fondo del modal
+        add_settings_field(
+            'scl_modal_background_image',
+            __('Imagen de fondo', 'simple-cards-listings'),
+            array($this, 'render_modal_background_image_field'),
+            'scl_settings',
+            'scl_modal_section'
+        );
     }
 
     /**
@@ -146,6 +202,26 @@ class SCL_Admin
             if ($sanitized['logs_retention'] < 7) {
                 $sanitized['logs_retention'] = 90;
             }
+        }
+
+        // Sanitizar opciones de fondo del modal
+        if (isset($input['modal_background_type'])) {
+            $allowed_types = array('color', 'image');
+            $sanitized['modal_background_type'] = in_array($input['modal_background_type'], $allowed_types, true) ? $input['modal_background_type'] : 'color';
+        }
+
+        if (isset($input['modal_background_color'])) {
+            $color = sanitize_text_field($input['modal_background_color']);
+            // Validar que sea un color hexadecimal válido
+            if (preg_match('/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/', $color)) {
+                $sanitized['modal_background_color'] = $color;
+            } else {
+                $sanitized['modal_background_color'] = '#ece6ce';
+            }
+        }
+
+        if (isset($input['modal_background_image'])) {
+            $sanitized['modal_background_image'] = absint($input['modal_background_image']);
         }
 
         return $sanitized;
@@ -201,6 +277,132 @@ class SCL_Admin
     ?>
         <input type="number" name="scl_options[logs_retention]" value="<?php echo esc_attr($value); ?>" min="7" max="365" class="small-text">
         <p class="description"><?php esc_html_e('Número de días para mantener los registros de actividad.', 'simple-cards-listings'); ?></p>
+    <?php
+    }
+
+    /**
+     * Renderizar sección de modales
+     */
+    public function render_modal_section()
+    {
+        echo '<p>' . esc_html__('Personaliza el aspecto de los modales de información de establecimientos.', 'simple-cards-listings') . '</p>';
+    }
+
+    /**
+     * Renderizar campo de tipo de fondo del modal
+     */
+    public function render_modal_background_type_field()
+    {
+        $options = get_option('scl_options', array());
+        $value = isset($options['modal_background_type']) ? $options['modal_background_type'] : 'color';
+    ?>
+        <select name="scl_options[modal_background_type]" id="scl_modal_background_type">
+            <option value="color" <?php selected($value, 'color'); ?>>
+                <?php esc_html_e('Color sólido', 'simple-cards-listings'); ?>
+            </option>
+            <option value="image" <?php selected($value, 'image'); ?>>
+                <?php esc_html_e('Imagen de fondo', 'simple-cards-listings'); ?>
+            </option>
+        </select>
+        <p class="description"><?php esc_html_e('Selecciona si deseas usar un color sólido o una imagen de fondo.', 'simple-cards-listings'); ?></p>
+        <script>
+            jQuery(document).ready(function($) {
+                function toggleModalBackgroundFields() {
+                    var type = $('#scl_modal_background_type').val();
+                    if (type === 'color') {
+                        $('#scl_modal_background_color').closest('tr').show();
+                        $('#scl_modal_background_image').closest('tr').hide();
+                    } else {
+                        $('#scl_modal_background_color').closest('tr').hide();
+                        $('#scl_modal_background_image').closest('tr').show();
+                    }
+                }
+                $('#scl_modal_background_type').on('change', toggleModalBackgroundFields);
+                toggleModalBackgroundFields();
+            });
+        </script>
+    <?php
+    }
+
+    /**
+     * Renderizar campo de color de fondo del modal
+     */
+    public function render_modal_background_color_field()
+    {
+        $options = get_option('scl_options', array());
+        $value = isset($options['modal_background_color']) ? $options['modal_background_color'] : '#ece6ce';
+    ?>
+        <input type="text" name="scl_options[modal_background_color]" id="scl_modal_background_color" value="<?php echo esc_attr($value); ?>" class="scl-color-picker" data-default-color="#ece6ce">
+        <p class="description"><?php esc_html_e('Color de fondo en formato hexadecimal (ejemplo: #ece6ce).', 'simple-cards-listings'); ?></p>
+        <script>
+            jQuery(document).ready(function($) {
+                $('.scl-color-picker').wpColorPicker();
+            });
+        </script>
+    <?php
+    }
+
+    /**
+     * Renderizar campo de imagen de fondo del modal
+     */
+    public function render_modal_background_image_field()
+    {
+        $options = get_option('scl_options', array());
+        $image_id = isset($options['modal_background_image']) ? $options['modal_background_image'] : 0;
+        $image_url = $image_id ? wp_get_attachment_image_url($image_id, 'medium') : '';
+    ?>
+        <div class="scl-image-upload-wrapper">
+            <input type="hidden" name="scl_options[modal_background_image]" id="scl_modal_background_image" value="<?php echo esc_attr($image_id); ?>">
+            <button type="button" class="button scl-upload-image-button">
+                <?php esc_html_e('Seleccionar imagen', 'simple-cards-listings'); ?>
+            </button>
+            <button type="button" class="button scl-remove-image-button" style="<?php echo $image_id ? '' : 'display:none;'; ?>">
+                <?php esc_html_e('Remover imagen', 'simple-cards-listings'); ?>
+            </button>
+            <div class="scl-image-preview" style="margin-top: 10px; <?php echo $image_id ? '' : 'display:none;'; ?>">
+                <img src="<?php echo esc_url($image_url); ?>" style="max-width: 300px; height: auto; border: 1px solid #ddd;">
+            </div>
+            <p class="description"><?php esc_html_e('Imagen de fondo para los modales. Se recomienda una imagen con suficiente contraste para la legibilidad del texto.', 'simple-cards-listings'); ?></p>
+        </div>
+        <script>
+            jQuery(document).ready(function($) {
+                var mediaUploader;
+
+                $('.scl-upload-image-button').on('click', function(e) {
+                    e.preventDefault();
+
+                    if (mediaUploader) {
+                        mediaUploader.open();
+                        return;
+                    }
+
+                    mediaUploader = wp.media({
+                        title: '<?php esc_html_e('Seleccionar imagen de fondo', 'simple-cards-listings'); ?>',
+                        button: {
+                            text: '<?php esc_html_e('Usar esta imagen', 'simple-cards-listings'); ?>'
+                        },
+                        multiple: false
+                    });
+
+                    mediaUploader.on('select', function() {
+                        var attachment = mediaUploader.state().get('selection').first().toJSON();
+                        $('#scl_modal_background_image').val(attachment.id);
+                        $('.scl-image-preview img').attr('src', attachment.url);
+                        $('.scl-image-preview').show();
+                        $('.scl-remove-image-button').show();
+                    });
+
+                    mediaUploader.open();
+                });
+
+                $('.scl-remove-image-button').on('click', function(e) {
+                    e.preventDefault();
+                    $('#scl_modal_background_image').val('');
+                    $('.scl-image-preview').hide();
+                    $(this).hide();
+                });
+            });
+        </script>
     <?php
     }
 

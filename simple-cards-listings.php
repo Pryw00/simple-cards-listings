@@ -105,6 +105,7 @@ final class Simple_Cards_Listings
         new SCL_Integrations();
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+        add_action('wp_head', array($this, 'add_modal_custom_styles'));
 
         // Inicializar componentes
         add_action('init', array('SCL_Post_Types', 'init'), 5);
@@ -266,6 +267,32 @@ final class Simple_Cards_Listings
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce'   => wp_create_nonce('scl_nonce'),
         ));
+    }
+
+    /**
+     * Agregar estilos personalizados del modal en el frontend
+     */
+    public function add_modal_custom_styles()
+    {
+        $options = get_option('scl_options', array());
+        $background_type = isset($options['modal_background_type']) ? $options['modal_background_type'] : 'color';
+        $background_color = isset($options['modal_background_color']) ? $options['modal_background_color'] : '#ece6ce';
+        $background_image_id = isset($options['modal_background_image']) ? $options['modal_background_image'] : 0;
+
+        $custom_css = '';
+
+        if ($background_type === 'image' && $background_image_id) {
+            $image_url = wp_get_attachment_image_url($background_image_id, 'full');
+            if ($image_url) {
+                $custom_css = ".scl-modal-body { background-image: url('" . esc_url($image_url) . "'); background-size: cover; background-position: center; background-repeat: no-repeat; }";
+            }
+        } elseif ($background_type === 'color' && $background_color) {
+            $custom_css = ".scl-modal-body { background-color: " . esc_attr($background_color) . "; }";
+        }
+
+        if ($custom_css) {
+            echo "<style type='text/css'>\n" . $custom_css . "\n</style>\n";
+        }
     }
 
     /**
