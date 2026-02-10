@@ -6,6 +6,25 @@
  */
 
 /* ==========================================================================
+   Fuentes
+   ========================================================================== */
+/* Importar Montserrat de Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap");
+
+/* Fuente Chunk para títulos */
+@font-face {
+  font-family: "Chunk";
+  src:
+    url("../fonts/chunk.woff2") format("woff2"),
+    url("../fonts/chunk.woff") format("woff"),
+    url("../fonts/chunk.ttf") format("truetype"),
+    url("../fonts/chunk.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
    Variables
    ========================================================================== */
 :root {
@@ -25,6 +44,66 @@
   --scl-radius: 8px;
   --scl-radius-lg: 16px;
   --scl-transition: all 0.3s ease;
+  --scl-font-heading: "Chunk", sans-serif;
+  --scl-font-body: "Montserrat", sans-serif;
+}
+
+/* ==========================================================================
+   Tipografía General
+   ========================================================================== */
+/* Aplicar Montserrat a todos los elementos del plugin */
+.scl-container,
+.scl-container *,
+.scl-modal,
+.scl-modal *,
+.scl-cupones-container,
+.scl-cupones-container *,
+.scl-dashboard-container,
+.scl-dashboard-container *,
+.scl-form-container,
+.scl-form-container * {
+  font-family: var(--scl-font-body);
+}
+
+/* Aplicar Chunk a todos los títulos */
+.scl-container h1,
+.scl-container h2,
+.scl-container h3,
+.scl-container h4,
+.scl-container h5,
+.scl-container h6,
+.scl-modal h1,
+.scl-modal h2,
+.scl-modal h3,
+.scl-modal h4,
+.scl-modal h5,
+.scl-modal h6,
+.scl-cupones-container h1,
+.scl-cupones-container h2,
+.scl-cupones-container h3,
+.scl-cupones-container h4,
+.scl-cupones-container h5,
+.scl-cupones-container h6,
+.scl-dashboard-container h1,
+.scl-dashboard-container h2,
+.scl-dashboard-container h3,
+.scl-dashboard-container h4,
+.scl-dashboard-container h5,
+.scl-dashboard-container h6,
+.scl-form-container h1,
+.scl-form-container h2,
+.scl-form-container h3,
+.scl-form-container h4,
+.scl-form-container h5,
+.scl-form-container h6,
+.scl-card-title,
+.scl-cupon-titulo,
+.scl-cupon-modal-titulo,
+#scl-promocion-modal-titulo,
+.scl-dashboard-header h2 {
+  font-family: var(--scl-font-heading);
+  font-weight: normal;
+  letter-spacing: 0.02em;
 }
 
 /* ==========================================================================
@@ -308,9 +387,11 @@
 }
 
 .scl-modal-title {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-family: var(--scl-font-body) !important;
+  font-weight: 900 !important;
   margin: 0 0 20px 0;
+  text-transform: uppercase;
   color: var(--scl-text-color);
 }
 
@@ -335,6 +416,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
+  padding-top: 25px;
   color: var(--scl-text-color);
   transition: var(--scl-transition);
   text-decoration: none;
@@ -346,15 +428,15 @@
 }
 
 .scl-social-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 45px;
+  height: 45px;
 }
 
 /* Action Buttons */
 .scl-modal-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .scl-action-btn {
@@ -362,14 +444,15 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 14px 24px;
+  padding: 17px 24px;
   border-radius: 50px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   transition: var(--scl-transition);
   border: none;
   cursor: pointer;
   font-size: 14px;
+  text-transform: uppercase;
 }
 
 .scl-action-btn svg {
@@ -402,16 +485,19 @@
 }
 
 .scl-modal-image {
-  width: 100%;
+  width: 400px;
+  height: 400px;
   border-radius: var(--scl-radius-lg);
   overflow: hidden;
 }
 
 .scl-modal-image img {
   width: 100%;
-  height: auto;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center;
   display: block;
-  border-radius: var(--scl-radius-lg);
+  border-radius: var(--scl-radius-lg) 16px;
 }
 
 /* ==========================================================================
@@ -828,6 +914,7 @@
    ========================================================================== */
 .scl-category-filter {
   border: none !important;
+  height: auto !important;
   padding: 12px 16px !important;
   font-size: 16px !important;
   background: transparent !important;

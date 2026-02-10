@@ -6,6 +6,53 @@
  */
 
 /* ==========================================================================
+   Fuentes
+   ========================================================================== */
+/* Importar Montserrat de Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+/* Fuente Chunk para títulos */
+@font-face {
+  font-family: 'Chunk';
+  src: url('../fonts/chunk.woff2') format('woff2'),
+       url('../fonts/chunk.woff') format('woff'),
+       url('../fonts/chunk.ttf') format('truetype'),
+       url('../fonts/chunk.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   Tipografía General - Admin
+   ========================================================================== */
+:root {
+  --scl-font-heading: 'Chunk', sans-serif;
+  --scl-font-body: 'Montserrat', sans-serif;
+}
+
+/* Aplicar Montserrat a elementos del admin */
+.scl-metabox-wrapper,
+.scl-metabox-wrapper *,
+.scl-admin-page,
+.scl-admin-page * {
+  font-family: var(--scl-font-body);
+}
+
+/* Aplicar Chunk a títulos en admin */
+.scl-metabox-wrapper h2,
+.scl-metabox-wrapper h3,
+.scl-metabox-wrapper h4,
+.scl-admin-page h1,
+.scl-admin-page h2,
+.scl-admin-page h3,
+.scl-admin-page h4 {
+  font-family: var(--scl-font-heading);
+  font-weight: normal;
+  letter-spacing: 0.02em;
+}
+
+/* ==========================================================================
    Metabox Wrapper
    ========================================================================== */
 .scl-metabox-wrapper {
