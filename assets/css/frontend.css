@@ -245,16 +245,6 @@
   }
 }
 
-@media (max-width: 480px) {
-  .scl-grid-2,
-  .scl-grid-3,
-  .scl-grid-4,
-  .scl-grid-5,
-  .scl-grid-6 {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ==========================================================================
    Card Item
    ========================================================================== */
@@ -304,6 +294,14 @@
   box-sizing: border-box;
 }
 
+@media (max-width: 768px) {
+  .scl-modal {
+    padding: 10px;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+}
+
 .scl-modal-overlay {
   position: absolute;
   top: 0;
@@ -324,6 +322,14 @@
   overflow-y: auto;
   box-shadow: var(--scl-shadow-lg);
   animation: scl-modal-in 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .scl-modal-content {
+    max-height: 95vh;
+    border-radius: var(--scl-radius);
+    margin: 10px;
+  }
 }
 
 .scl-modal-large {
@@ -364,6 +370,14 @@
   background-color: #ece6ce;
 }
 
+@media (max-width: 768px) {
+  .scl-modal-body {
+    padding: 20px 15px;
+    background-size: contain !important;
+    background-repeat: inherit !important;
+  }
+}
+
 /* Modal Establecimiento */
 .scl-modal-establecimiento {
   display: grid;
@@ -374,6 +388,7 @@
 @media (max-width: 768px) {
   .scl-modal-establecimiento {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
 
   .scl-modal-right {
@@ -395,6 +410,13 @@
   color: var(--scl-text-color);
 }
 
+@media (max-width: 768px) {
+  .scl-modal-title {
+    font-size: 1.2rem;
+    margin: 0 0 15px 0;
+  }
+}
+
 .scl-modal-description {
   color: var(--scl-text-color);
   line-height: 1.7;
@@ -404,10 +426,28 @@
   margin: 0 0 15px 0;
 }
 
+@media (max-width: 768px) {
+  .scl-modal-description {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .scl-modal-description p {
+    margin: 0 0 10px 0;
+  }
+}
+
 /* Social Icons */
 .scl-modal-social {
   display: flex;
   gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .scl-modal-social {
+    gap: 15px;
+    justify-content: center;
+  }
 }
 
 .scl-social-icon {
@@ -455,6 +495,14 @@
   text-transform: uppercase;
 }
 
+@media (max-width: 768px) {
+  .scl-action-btn {
+    padding: 12px 18px;
+    font-size: 12px;
+    gap: 8px;
+  }
+}
+
 .scl-action-btn svg {
   width: 20px;
   height: 20px;
@@ -489,6 +537,14 @@
   height: 400px;
   border-radius: var(--scl-radius-lg);
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .scl-modal-image {
+    width: 100%;
+    height: 250px;
+    max-width: 100%;
+  }
 }
 
 .scl-modal-image img {
