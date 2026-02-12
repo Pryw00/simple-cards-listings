@@ -1389,11 +1389,13 @@ class SCL_Shortcodes
      */
     public static function render_cupones_grid($atts)
     {
+
         $atts = shortcode_atts(array(
             'columns'            => 3,
             'per_page'           => 12,
             'search_placeholder' => '',
             'level'              => '', // Niveles: "{role, color, priority};..."
+            'categoria'          => '', // Slug de la categoría padre
         ), $atts, 'scl_cupones');
 
         $posts_per_page = intval($atts['per_page']);
@@ -1401,7 +1403,21 @@ class SCL_Shortcodes
             $posts_per_page = 12;
         }
 
-        // Query simple - traer todas las promociones publicadas
+        // Si se pasa categoria, filtrar solo por esa categoría padre
+        $tax_query = array();
+        $categoria_padre = null;
+        if (!empty($atts['categoria'])) {
+            $categoria_padre = get_term_by('slug', $atts['categoria'], 'categoria_promocion');
+            if ($categoria_padre) {
+                $tax_query[] = array(
+                    'taxonomy' => 'categoria_promocion',
+                    'field'    => 'term_id',
+                    'terms'    => $categoria_padre->term_id,
+                    'include_children' => true,
+                );
+            }
+        }
+
         $args = array(
             'post_type'      => 'promocion',
             'post_status'    => 'publish',
@@ -1409,6 +1425,24 @@ class SCL_Shortcodes
             'orderby'        => 'date',
             'order'          => 'DESC',
         );
+        if (!empty($tax_query)) {
+            $args['tax_query'] = $tax_query;
+        }
+
+        // Obtener categorías hijas para el dropdown si hay categoria padre, si no, mostrar top-level
+        if ($categoria_padre) {
+            $categorias_dropdown = get_terms(array(
+                'taxonomy'   => 'categoria_promocion',
+                'hide_empty' => true,
+                'parent'     => $categoria_padre->term_id,
+            ));
+        } else {
+            $categorias_dropdown = get_terms(array(
+                'taxonomy'   => 'categoria_promocion',
+                'hide_empty' => true,
+                'parent'     => 0,
+            ));
+        }
 
         // Parsear niveles si se proporcionaron
         $levels = self::parse_levels($atts['level']);
@@ -1422,6 +1456,9 @@ class SCL_Shortcodes
         <div class="scl-cupones-container"
             <?php if ($has_levels) : ?>
             data-levels="<?php echo esc_attr(json_encode($levels)); ?>"
+            <?php endif; ?>
+            <?php if (!empty($atts['categoria'])) : ?>
+            data-categoria-base="<?php echo esc_attr($atts['categoria']); ?>"
             <?php endif; ?>>
             <!-- Buscador -->
             <div class="scl-search-wrapper">
@@ -1432,6 +1469,17 @@ class SCL_Shortcodes
                         class="scl-search-input"
                         placeholder="<?php echo esc_attr(!empty($atts['search_placeholder']) ? $atts['search_placeholder'] : __('Buscar promociones...', 'simple-cards-listings')); ?>"
                         autocomplete="off">
+                    <!-- Dropdown de categorías (solo si hay categorías) -->
+                    <?php if (!empty($categorias_dropdown) && !is_wp_error($categorias_dropdown)) : ?>
+                        <select id="scl-cupones-category-filter" class="scl-category-filter">
+                            <option value=""><?php esc_html_e('Todas las categorías', 'simple-cards-listings'); ?></option>
+                            <?php foreach ($categorias_dropdown as $cat) : ?>
+                                <option value="<?php echo esc_attr($cat->slug); ?>">
+                                    <?php echo esc_html($cat->name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
                     <button type="button" class="scl-search-button" aria-label="<?php esc_attr_e('Buscar', 'simple-cards-listings'); ?>">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>

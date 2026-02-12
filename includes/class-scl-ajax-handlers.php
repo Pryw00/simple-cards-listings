@@ -1198,7 +1198,9 @@ class SCL_Ajax_Handlers
     {
         check_ajax_referer('scl_nonce', 'nonce');
 
-        $search_term = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
+        $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
+        $categoria_base = isset($_POST['categoria_base']) ? sanitize_text_field($_POST['categoria_base']) : '';
 
         // Formato de datetime-local: YYYY-MM-DDTHH:MM
         $ahora = current_time('Y-m-d\TH:i');
@@ -1209,6 +1211,39 @@ class SCL_Ajax_Handlers
             'post_status' => 'publish',
             'posts_per_page' => -1,
         );
+
+        // Crear tax_query
+        $tax_query = array();
+
+        // Si hay una categoría base (del shortcode), aplicar ese filtro
+        if (!empty($categoria_base)) {
+            $cat_base = get_term_by('slug', $categoria_base, 'categoria_promocion');
+            if ($cat_base) {
+                $tax_query[] = array(
+                    'taxonomy' => 'categoria_promocion',
+                    'field'    => 'term_id',
+                    'terms'    => $cat_base->term_id,
+                    'include_children' => true,
+                );
+            }
+        }
+
+        // Si hay una categoría seleccionada en el dropdown, agregarla al filtro
+        if (!empty($category_selected)) {
+            $tax_query[] = array(
+                'taxonomy' => 'categoria_promocion',
+                'field'    => 'slug',
+                'terms'    => $category_selected,
+            );
+        }
+
+        // Aplicar tax_query si hay filtros
+        if (!empty($tax_query)) {
+            if (count($tax_query) > 1) {
+                $tax_query['relation'] = 'AND';
+            }
+            $args['tax_query'] = $tax_query;
+        }
 
         // Meta query con OR para manejar campos vacíos
         $meta_query = array('relation' => 'AND');
@@ -1245,11 +1280,20 @@ class SCL_Ajax_Handlers
 
         $args['meta_query'] = $meta_query;
 
-        // Si hay búsqueda, buscar en título, contenido y establecimiento
-        if (!empty($search_term)) {
-            $args['s'] = $search_term;
+        // Si hay búsqueda, buscar en título/contenido de promoción O en nombre del establecimiento
+        $promocion_ids = array();
 
-            // También buscar por establecimiento
+        if (!empty($search_term)) {
+            // Buscar promociones por título/contenido
+            $promo_args = $args;
+            $promo_args['s'] = $search_term;
+            $promo_args['fields'] = 'ids';
+            $promo_query = new WP_Query($promo_args);
+            if ($promo_query->have_posts()) {
+                $promocion_ids = array_merge($promocion_ids, $promo_query->posts);
+            }
+
+            // Buscar establecimientos que coincidan con el término
             $est_query = new WP_Query(array(
                 'post_type' => 'establecimiento',
                 's' => $search_term,
@@ -1257,12 +1301,32 @@ class SCL_Ajax_Handlers
                 'fields' => 'ids',
             ));
 
+            // Si hay establecimientos que coinciden, buscar sus promociones
             if ($est_query->have_posts()) {
-                $args['meta_query'][] = array(
+                $est_promo_args = $args;
+                unset($est_promo_args['s']); // No filtrar por texto aquí
+                $est_promo_args['meta_query'][] = array(
                     'key' => '_scl_establecimiento_id',
                     'value' => $est_query->posts,
                     'compare' => 'IN',
                 );
+                $est_promo_args['fields'] = 'ids';
+                $est_promo_query = new WP_Query($est_promo_args);
+                if ($est_promo_query->have_posts()) {
+                    $promocion_ids = array_merge($promocion_ids, $est_promo_query->posts);
+                }
+            }
+
+            // Eliminar duplicados y obtener promociones finales
+            $promocion_ids = array_unique($promocion_ids);
+
+            if (!empty($promocion_ids)) {
+                // Consulta final solo con los IDs encontrados
+                $args['post__in'] = $promocion_ids;
+                unset($args['s']);
+            } else {
+                // No se encontró nada, forzar resultado vacío
+                $args['post__in'] = array(0);
             }
         }
 

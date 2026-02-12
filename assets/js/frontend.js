@@ -113,6 +113,20 @@
       $(document).off("click", ".scl-modal-close, .scl-modal-overlay");
       $(document).off("click", ".scl-tab-btn");
 
+      // Eventos para promociones (cupones)
+      $(document).off("change", "#scl-cupones-category-filter");
+      $(document).off("input", "#scl-cupones-search");
+      $(document).on(
+        "change",
+        "#scl-cupones-category-filter",
+        this.handleCuponesCategoryFilter.bind(this),
+      );
+      $(document).on(
+        "input",
+        "#scl-cupones-search",
+        this.handleCuponesSearch.bind(this),
+      );
+
       // Búsqueda en tiempo real
       $(document).on(
         "input",
@@ -228,6 +242,72 @@
       this.searchTimer = setTimeout(() => {
         this.performSearch(term);
       }, 400);
+    },
+
+    /**
+     * Manejar filtro de categoría en promociones
+     */
+    handleCuponesCategoryFilter: function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const categorySlug = $(e.target).val();
+      const searchTerm = $("#scl-cupones-search").val().trim();
+      this.performCuponesSearch(searchTerm, categorySlug);
+    },
+
+    /**
+     * Manejar búsqueda en promociones
+     */
+    handleCuponesSearch: function (e) {
+      const term = e.target.value.trim();
+      const categorySlug = $("#scl-cupones-category-filter").val() || "";
+      clearTimeout(this.cuponesSearchTimer);
+      this.cuponesSearchTimer = setTimeout(() => {
+        this.performCuponesSearch(term, categorySlug);
+      }, 400);
+    },
+
+    /**
+     * Realizar búsqueda/filtrado de promociones (AJAX)
+     */
+    performCuponesSearch: function (searchTerm, categorySlug) {
+      const $grid = $("#scl-cupones-grid");
+      const $noResults = $("#scl-cupones-no-results");
+      const $container = $(".scl-cupones-container");
+      const categoriaBase = $container.data("categoria-base") || "";
+      const levels = $container.data("levels") || "";
+
+      $grid.html('<div class="scl-loading"></div>');
+      $noResults.hide();
+
+      $.ajax({
+        url: scl_ajax.ajax_url,
+        type: "POST",
+        data: {
+          action: "scl_search_cupones",
+          nonce: scl_ajax.nonce,
+          search_term: searchTerm,
+          category_selected: categorySlug,
+          categoria_base: categoriaBase,
+          levels: JSON.stringify(levels),
+        },
+        success: function (response) {
+          if (response.success && response.data && response.data.html) {
+            $grid.html(response.data.html);
+            $noResults.hide();
+          } else {
+            $grid.html("");
+            $noResults.show();
+          }
+        },
+        error: function () {
+          $grid.html(
+            '<p class="scl-message scl-message-error">' +
+              (scl_ajax.i18n ? scl_ajax.i18n.error : "Error") +
+              "</p>",
+          );
+        },
+      });
     },
 
     /**
