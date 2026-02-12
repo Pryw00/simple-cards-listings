@@ -52,15 +52,23 @@
   function searchCupones(searchTerm) {
     const $grid = $("#scl-cupones-grid");
     const $noResults = $("#scl-cupones-no-results");
+    const $container = $(".scl-cupones-container");
+    const levels = $container.data("levels") || "";
+
+    const requestData = {
+      action: "scl_search_cupones",
+      nonce: sclData.nonce,
+      search: searchTerm,
+    };
+
+    if (levels) {
+      requestData.levels = JSON.stringify(levels);
+    }
 
     $.ajax({
       url: sclData.ajaxUrl,
       type: "POST",
-      data: {
-        action: "scl_search_cupones",
-        nonce: sclData.nonce,
-        search: searchTerm,
-      },
+      data: requestData,
       beforeSend: function () {
         $grid.addClass("scl-loading");
       },

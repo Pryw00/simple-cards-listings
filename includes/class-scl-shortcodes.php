@@ -1382,7 +1382,7 @@ class SCL_Shortcodes
 
     /**
      * Shortcode: Grid de promociones
-     * [scl_cupones columns="3" per_page="12" search_placeholder=""]
+     * [scl_cupones columns="3" per_page="12" search_placeholder="" level="{socio_gold, #35ff8f, 0}"]
      *
      * @param array $atts Atributos del shortcode.
      * @return string
@@ -1393,6 +1393,7 @@ class SCL_Shortcodes
             'columns'            => 3,
             'per_page'           => 12,
             'search_placeholder' => '',
+            'level'              => '', // Niveles: "{role, color, priority};..."
         ), $atts, 'scl_cupones');
 
         $posts_per_page = intval($atts['per_page']);
@@ -1409,11 +1410,19 @@ class SCL_Shortcodes
             'order'          => 'DESC',
         );
 
+        // Parsear niveles si se proporcionaron
+        $levels = self::parse_levels($atts['level']);
+        // Si no se pasó level, no aplicar colores (array vacío)
+        $has_levels = !empty($atts['level']);
+
         $cupones = new WP_Query($args);
 
         ob_start();
     ?>
-        <div class="scl-cupones-container">
+        <div class="scl-cupones-container"
+            <?php if ($has_levels) : ?>
+            data-levels="<?php echo esc_attr(json_encode($levels)); ?>"
+            <?php endif; ?>>
             <!-- Buscador -->
             <div class="scl-search-wrapper">
                 <div class="scl-search-box">
@@ -1436,7 +1445,7 @@ class SCL_Shortcodes
             <div class="scl-cupones-grid scl-grid-<?php echo esc_attr($atts['columns']); ?>" id="scl-cupones-grid">
                 <?php if ($cupones->have_posts()) : ?>
                     <?php while ($cupones->have_posts()) : $cupones->the_post(); ?>
-                        <?php echo self::render_cupon_card(get_the_ID()); ?>
+                        <?php echo self::render_cupon_card(get_the_ID(), $has_levels ? $levels : array()); ?>
                     <?php endwhile; ?>
                     <?php wp_reset_postdata(); ?>
                 <?php else : ?>
@@ -1473,9 +1482,10 @@ class SCL_Shortcodes
      * Renderizar card de cupón
      *
      * @param int $post_id ID del cupón.
+     * @param array $levels Array de niveles con roles, colores y prioridades.
      * @return string
      */
-    public static function render_cupon_card($post_id)
+    public static function render_cupon_card($post_id, $levels = array())
     {
         $imagen_url = get_the_post_thumbnail_url($post_id, 'medium');
         if (!$imagen_url) {
@@ -1484,10 +1494,28 @@ class SCL_Shortcodes
 
         $establecimiento_id = get_post_meta($post_id, '_scl_establecimiento_id', true);
         $establecimiento_nombre = '';
+        $border_color = '';
+
         if ($establecimiento_id) {
             $est = get_post($establecimiento_id);
             if ($est) {
                 $establecimiento_nombre = $est->post_title;
+
+                // Determinar color del borde según rol del autor del establecimiento
+                if (!empty($levels)) {
+                    $author_id = $est->post_author;
+                    $user = get_userdata($author_id);
+
+                    if ($user) {
+                        foreach ($levels as $level) {
+                            if (empty($level['role'])) continue;
+                            if (in_array($level['role'], (array) $user->roles)) {
+                                $border_color = $level['color'];
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1511,7 +1539,11 @@ class SCL_Shortcodes
 
         ob_start();
     ?>
-        <div class="scl-cupon-card" data-id="<?php echo esc_attr($post_id); ?>">
+        <div class="scl-cupon-card" data-id="<?php echo esc_attr($post_id); ?>"
+            <?php if (!empty($border_color)) : ?>
+            style="border-color: <?php echo esc_attr($border_color); ?>; border-width: 2px; border-style: solid; box-shadow: 0 0 12px <?php echo esc_attr($border_color); ?>4D;"
+            data-level-color="<?php echo esc_attr($border_color); ?>"
+            <?php endif; ?>>
 
             <div class="scl-cupon-imagen">
                 <img src="<?php echo esc_url($imagen_url); ?>" alt="<?php echo esc_attr(get_the_title($post_id)); ?>">

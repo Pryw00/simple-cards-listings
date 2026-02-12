@@ -265,6 +265,7 @@
 /* Diseño de Medallón/Emblema para Grid Gold */
 .scl-card-badge {
   position: relative;
+  border-radius: 50%;
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
@@ -374,6 +375,10 @@
 /* Efecto hover para el medallón */
 .scl-card-badge:hover .scl-card-badge-outer {
   transform: scale(1.05) rotate(5deg);
+  box-shadow:
+    0 8px 25px var(--badge-shadow, rgba(212, 175, 55, 0.5)),
+    inset 0 2px 10px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .scl-card-badge:hover .scl-card-badge-inner {

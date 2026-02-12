@@ -1269,10 +1269,20 @@ class SCL_Ajax_Handlers
         $query = new WP_Query($args);
         $html = '';
 
+        // Parsear niveles si se proporcionaron
+        $levels_json = isset($_POST['levels']) ? sanitize_text_field($_POST['levels']) : '';
+        $levels = array();
+        if (!empty($levels_json)) {
+            $decoded = json_decode(stripslashes($levels_json), true);
+            if (is_array($decoded)) {
+                $levels = $decoded;
+            }
+        }
+
         if ($query->have_posts()) {
             while ($query->have_posts()) {
                 $query->the_post();
-                $html .= SCL_Shortcodes::render_cupon_card(get_the_ID());
+                $html .= SCL_Shortcodes::render_cupon_card(get_the_ID(), $levels);
             }
             wp_reset_postdata();
         }
