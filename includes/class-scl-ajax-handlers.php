@@ -205,6 +205,36 @@ class SCL_Ajax_Handlers
                         </a>
                     <?php endif; ?>
                 </div>
+
+                <!-- Redes sociales -->
+                <div class="scl-modal-social">
+                    <?php if (! empty($data['tiktok'])) : ?>
+                        <a href="<?php echo esc_url($data['tiktok']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="TikTok">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+                            </svg>
+                        </a>
+                    <?php endif; ?>
+
+                    <?php if (! empty($data['facebook'])) : ?>
+                        <a href="<?php echo esc_url($data['facebook']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="Facebook">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                            </svg>
+                        </a>
+                    <?php endif; ?>
+
+                    <?php if (! empty($data['instagram'])) : ?>
+                        <a href="<?php echo esc_url($data['instagram']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="Instagram">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                            </svg>
+                        </a>
+                    <?php endif; ?>
+                </div>
+
             </div>
 
             <div class="scl-modal-right">
@@ -212,34 +242,7 @@ class SCL_Ajax_Handlers
                     <div class="scl-modal-image">
                         <img src="<?php echo esc_url($data['imagen_url']); ?>" alt="<?php echo esc_attr($data['title']); ?>">
                     </div>
-                    <!-- Redes sociales -->
-                    <div class="scl-modal-social">
-                        <?php if (! empty($data['tiktok'])) : ?>
-                            <a href="<?php echo esc_url($data['tiktok']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="TikTok">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                                </svg>
-                            </a>
-                        <?php endif; ?>
 
-                        <?php if (! empty($data['facebook'])) : ?>
-                            <a href="<?php echo esc_url($data['facebook']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="Facebook">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-                                </svg>
-                            </a>
-                        <?php endif; ?>
-
-                        <?php if (! empty($data['instagram'])) : ?>
-                            <a href="<?php echo esc_url($data['instagram']); ?>" target="_blank" rel="noopener" class="scl-social-icon" title="Instagram">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                                </svg>
-                            </a>
-                        <?php endif; ?>
-                    </div>
                 <?php elseif (! empty($data['logo_url'])) : ?>
                     <div class="scl-modal-image">
                         <img src="<?php echo esc_url($data['logo_url']); ?>" alt="<?php echo esc_attr($data['title']); ?>">
@@ -265,6 +268,17 @@ class SCL_Ajax_Handlers
         $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
         $categoria_filter = isset($_POST['categoria_filter']) ? sanitize_text_field($_POST['categoria_filter']) : '';
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
+        $is_gold = isset($_POST['is_gold']) ? (bool) $_POST['is_gold'] : false;
+
+        // Parsear niveles
+        $levels = array();
+        if (isset($_POST['levels']) && !empty($_POST['levels'])) {
+            $levels_json = stripslashes($_POST['levels']);
+            $levels = json_decode($levels_json, true);
+            if (!is_array($levels)) {
+                $levels = array();
+            }
+        }
 
         // Si hay búsqueda de texto, buscar en todos los campos
         if (!empty($search_term)) {
@@ -408,11 +422,53 @@ class SCL_Ajax_Handlers
         $html = '';
 
         if ($query->have_posts()) {
-            while ($query->have_posts()) {
-                $query->the_post();
-                $html .= SCL_Shortcodes::render_card_item(get_the_ID());
+            // Si es grid gold, ordenar por nivel del usuario
+            if ($is_gold && !empty($levels)) {
+                // Agrupar posts por nivel
+                $posts_by_level = array();
+                foreach ($levels as $level_index => $level) {
+                    $posts_by_level[$level_index] = array();
+                }
+
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    $post_id = get_the_ID();
+                    $author_id = get_post_field('post_author', $post_id);
+                    $user = get_userdata($author_id);
+
+                    // Determinar nivel
+                    $assigned = false;
+                    foreach ($levels as $level_index => $level) {
+                        if (empty($level['role'])) continue;
+
+                        if ($user && in_array($level['role'], (array) $user->roles)) {
+                            $posts_by_level[$level_index][] = $post_id;
+                            $assigned = true;
+                            break;
+                        }
+                    }
+
+                    if (!$assigned) {
+                        $last_level_index = count($levels) - 1;
+                        $posts_by_level[$last_level_index][] = $post_id;
+                    }
+                }
+                wp_reset_postdata();
+
+                // Generar HTML ordenado por prioridad
+                foreach ($posts_by_level as $level_posts) {
+                    foreach ($level_posts as $post_id) {
+                        $html .= SCL_Shortcodes::render_card_item($post_id, true, '', '', '', $levels);
+                    }
+                }
+            } else {
+                // Grid normal
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    $html .= SCL_Shortcodes::render_card_item(get_the_ID(), false);
+                }
+                wp_reset_postdata();
             }
-            wp_reset_postdata();
         }
 
         wp_send_json_success(array(
@@ -884,6 +940,17 @@ class SCL_Ajax_Handlers
         $categoria_filter = isset($_POST['categoria_filter']) ? sanitize_text_field($_POST['categoria_filter']) : '';
         $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
+        $is_gold = isset($_POST['is_gold']) ? (bool) $_POST['is_gold'] : false;
+
+        // Parsear niveles
+        $levels = array();
+        if (isset($_POST['levels']) && !empty($_POST['levels'])) {
+            $levels_json = stripslashes($_POST['levels']);
+            $levels = json_decode($levels_json, true);
+            if (!is_array($levels)) {
+                $levels = array();
+            }
+        }
 
         if ($per_page <= 0) {
             $per_page = 12;
@@ -932,12 +999,55 @@ class SCL_Ajax_Handlers
         $html = '';
 
         if ($query->have_posts()) {
-            while ($query->have_posts()) {
-                $query->the_post();
-                $html .= SCL_Shortcodes::render_card_item(get_the_ID());
+            // Si es grid gold, necesitamos ordenar por nivel
+            if ($is_gold && !empty($levels)) {
+                // Agrupar posts por nivel
+                $posts_by_level = array();
+                foreach ($levels as $level_index => $level) {
+                    $posts_by_level[$level_index] = array();
+                }
+
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    $post_id = get_the_ID();
+                    $author_id = get_post_field('post_author', $post_id);
+                    $user = get_userdata($author_id);
+
+                    // Determinar nivel
+                    $assigned = false;
+                    foreach ($levels as $level_index => $level) {
+                        if (empty($level['role'])) continue;
+
+                        if ($user && in_array($level['role'], (array) $user->roles)) {
+                            $posts_by_level[$level_index][] = $post_id;
+                            $assigned = true;
+                            break;
+                        }
+                    }
+
+                    if (!$assigned) {
+                        $last_level_index = count($levels) - 1;
+                        $posts_by_level[$last_level_index][] = $post_id;
+                    }
+                }
+                wp_reset_postdata();
+
+                // Generar HTML ordenado por prioridad
+                foreach ($posts_by_level as $level_posts) {
+                    foreach ($level_posts as $post_id) {
+                        $html .= SCL_Shortcodes::render_card_item($post_id, true, '', '', '', $levels);
+                    }
+                }
+            } else {
+                // Grid normal
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    $html .= SCL_Shortcodes::render_card_item(get_the_ID(), false);
+                }
+                wp_reset_postdata();
             }
-            wp_reset_postdata();
-        }
+        };
+
 
         wp_send_json_success(array(
             'html' => $html,

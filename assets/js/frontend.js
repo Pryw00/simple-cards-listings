@@ -61,6 +61,24 @@
           parseInt($container.data("per-page")) || 12;
         this.paginationConfig.categoriaFilter =
           $container.data("categoria-filter") || "";
+        this.paginationConfig.isGold = $container.data("is-gold")
+          ? true
+          : false;
+
+        // Parsear niveles del data attribute
+        const levelsData = $container.data("levels");
+        if (levelsData) {
+          try {
+            this.paginationConfig.levels =
+              typeof levelsData === "string"
+                ? JSON.parse(levelsData)
+                : levelsData;
+          } catch (e) {
+            this.paginationConfig.levels = [];
+          }
+        } else {
+          this.paginationConfig.levels = [];
+        }
       }
     },
 
@@ -258,6 +276,8 @@
           search_term: searchTerm,
           categoria_filter: this.paginationConfig.categoriaFilter,
           category_selected: categorySlug,
+          is_gold: this.paginationConfig.isGold || false,
+          levels: JSON.stringify(this.paginationConfig.levels || []),
         },
         success: function (response) {
           if (response.success) {
@@ -312,6 +332,8 @@
           categoria_filter: this.paginationConfig.categoriaFilter,
           category_selected: categorySlug,
           search_term: searchTerm,
+          is_gold: this.paginationConfig.isGold || false,
+          levels: JSON.stringify(this.paginationConfig.levels || []),
         },
         success: function (response) {
           if (response.success) {
@@ -450,6 +472,8 @@
           categoria_filter: this.paginationConfig.categoriaFilter,
           category_selected: categorySelected,
           search_term: searchTerm,
+          is_gold: this.paginationConfig.isGold || false,
+          levels: JSON.stringify(this.paginationConfig.levels || []),
         },
         success: function (response) {
           if (response.success) {
@@ -926,176 +950,189 @@
     /**
      * Manejar click en pestañas del dashboard
      */
-    handleTabClick: function(e) {
+    handleTabClick: function (e) {
       e.preventDefault();
       const $btn = $(e.currentTarget);
-      const tab = $btn.data('tab');
+      const tab = $btn.data("tab");
 
       // Actualizar botones
-      $('.scl-tab-btn').removeClass('active');
-      $btn.addClass('active');
+      $(".scl-tab-btn").removeClass("active");
+      $btn.addClass("active");
 
       // Actualizar contenido
-      $('.scl-tab-content').removeClass('active');
-      $(`.scl-tab-content[data-tab="${tab}"]`).addClass('active');
+      $(".scl-tab-content").removeClass("active");
+      $(`.scl-tab-content[data-tab="${tab}"]`).addClass("active");
     },
 
     /**
      * Abrir modal de nueva promoción
      */
-    openPromocionModal: function(promocionId) {
-      const $modal = $('#scl-promocion-modal');
-      const $form = $('#scl-promocion-form');
-      const $titulo = $('#scl-promocion-modal-titulo');
-      
+    openPromocionModal: function (promocionId) {
+      const $modal = $("#scl-promocion-modal");
+      const $form = $("#scl-promocion-form");
+      const $titulo = $("#scl-promocion-modal-titulo");
+
       // Limpiar formulario
       $form[0].reset();
-      $('#scl-promocion-id').val('');
-      $('#scl-promo-imagen-preview').hide();
-      $('#scl-promo-form-message').hide();
-      
+      $("#scl-promocion-id").val("");
+      $("#scl-promo-imagen-preview").hide();
+      $("#scl-promo-form-message").hide();
+
       if (promocionId) {
         // Modo edición - cargar datos
-        $titulo.text('Editar Promoción');
+        $titulo.text("Editar Promoción");
         this.loadPromocionData(promocionId);
       } else {
         // Modo crear
-        $titulo.text('Nueva Promoción');
+        $titulo.text("Nueva Promoción");
       }
-      
+
       $modal.fadeIn(300);
-      $('body').addClass('scl-modal-open');
+      $("body").addClass("scl-modal-open");
     },
 
     /**
      * Cargar datos de promoción para editar
      */
-    loadPromocionData: function(promocionId) {
+    loadPromocionData: function (promocionId) {
       const self = this;
-      
+
       $.ajax({
         url: scl_ajax.ajax_url,
-        type: 'POST',
+        type: "POST",
         data: {
-          action: 'scl_get_cupon',
+          action: "scl_get_cupon",
           nonce: scl_ajax.nonce,
-          post_id: promocionId
+          post_id: promocionId,
         },
-        success: function(response) {
+        success: function (response) {
           if (response.success) {
             const data = response.data.cupon;
-            $('#scl-promocion-id').val(data.id);
-            $('#scl-promo-titulo').val(data.titulo);
-            $('#scl-promo-descripcion').val(data.descripcion.replace(/<[^>]*>/g, ''));
-            $('#scl-promo-establecimiento').val(data.establecimiento ? data.establecimiento.id : '');
-            $('#scl-promo-destacado').prop('checked', data.destacado);
-            
+            $("#scl-promocion-id").val(data.id);
+            $("#scl-promo-titulo").val(data.titulo);
+            $("#scl-promo-descripcion").val(
+              data.descripcion.replace(/<[^>]*>/g, ""),
+            );
+            $("#scl-promo-establecimiento").val(
+              data.establecimiento ? data.establecimiento.id : "",
+            );
+            $("#scl-promo-destacado").prop("checked", data.destacado);
+
             // Cargar fechas desde meta
             self.loadPromocionMeta(promocionId);
-            
+
             // Mostrar imagen actual
             if (data.imagen) {
-              $('#scl-promo-imagen-preview img').attr('src', data.imagen);
-              $('#scl-promo-imagen-preview').show();
+              $("#scl-promo-imagen-preview img").attr("src", data.imagen);
+              $("#scl-promo-imagen-preview").show();
             }
           }
-        }
+        },
       });
     },
 
     /**
      * Cargar meta de promoción (fechas)
      */
-    loadPromocionMeta: function(promocionId) {
+    loadPromocionMeta: function (promocionId) {
       $.ajax({
         url: scl_ajax.ajax_url,
-        type: 'POST',
+        type: "POST",
         data: {
-          action: 'scl_get_promocion_meta',
+          action: "scl_get_promocion_meta",
           nonce: scl_ajax.nonce,
-          promocion_id: promocionId
+          promocion_id: promocionId,
         },
-        success: function(response) {
+        success: function (response) {
           if (response.success && response.data) {
             if (response.data.fecha_inicio) {
-              $('#scl-promo-fecha-inicio').val(response.data.fecha_inicio);
+              $("#scl-promo-fecha-inicio").val(response.data.fecha_inicio);
             }
             if (response.data.fecha_fin) {
-              $('#scl-promo-fecha-fin').val(response.data.fecha_fin);
+              $("#scl-promo-fecha-fin").val(response.data.fecha_fin);
             }
           }
-        }
+        },
       });
     },
 
     /**
      * Enviar formulario de promoción
      */
-    submitPromocionForm: function(e) {
+    submitPromocionForm: function (e) {
       e.preventDefault();
-      
-      const $form = $('#scl-promocion-form');
-      const $button = $('#scl-promo-submit');
-      const $message = $('#scl-promo-form-message');
+
+      const $form = $("#scl-promocion-form");
+      const $button = $("#scl-promo-submit");
+      const $message = $("#scl-promo-form-message");
       const formData = new FormData($form[0]);
-      
-      formData.append('action', 'scl_submit_cupon');
-      formData.append('nonce', scl_ajax.nonce);
-      
-      $button.prop('disabled', true).text('Guardando...');
+
+      formData.append("action", "scl_submit_cupon");
+      formData.append("nonce", scl_ajax.nonce);
+
+      $button.prop("disabled", true).text("Guardando...");
       $message.hide();
-      
+
       $.ajax({
         url: scl_ajax.ajax_url,
-        type: 'POST',
+        type: "POST",
         data: formData,
         processData: false,
         contentType: false,
-        success: function(response) {
+        success: function (response) {
           if (response.success) {
-            $message.removeClass('error').addClass('success')
-              .text('Promoción guardada exitosamente').show();
-            
-            setTimeout(function() {
+            $message
+              .removeClass("error")
+              .addClass("success")
+              .text("Promoción guardada exitosamente")
+              .show();
+
+            setTimeout(function () {
               location.reload();
             }, 1500);
           } else {
-            $message.removeClass('success').addClass('error')
-              .text(response.data.message || 'Error al guardar la promoción').show();
-            $button.prop('disabled', false).text('Guardar Promoción');
+            $message
+              .removeClass("success")
+              .addClass("error")
+              .text(response.data.message || "Error al guardar la promoción")
+              .show();
+            $button.prop("disabled", false).text("Guardar Promoción");
           }
         },
-        error: function() {
-          $message.removeClass('success').addClass('error')
-            .text('Error de conexión').show();
-          $button.prop('disabled', false).text('Guardar Promoción');
-        }
+        error: function () {
+          $message
+            .removeClass("success")
+            .addClass("error")
+            .text("Error de conexión")
+            .show();
+          $button.prop("disabled", false).text("Guardar Promoción");
+        },
       });
     },
 
     /**
      * Eliminar promoción
      */
-    deletePromocion: function(promocionId) {
-      if (!confirm('¿Estás seguro de eliminar esta promoción?')) {
+    deletePromocion: function (promocionId) {
+      if (!confirm("¿Estás seguro de eliminar esta promoción?")) {
         return;
       }
-      
+
       $.ajax({
         url: scl_ajax.ajax_url,
-        type: 'POST',
+        type: "POST",
         data: {
-          action: 'scl_delete_cupon',
+          action: "scl_delete_cupon",
           nonce: scl_ajax.nonce,
-          cupon_id: promocionId
+          cupon_id: promocionId,
         },
-        success: function(response) {
+        success: function (response) {
           if (response.success) {
             location.reload();
           } else {
-            alert(response.data.message || 'Error al eliminar la promoción');
+            alert(response.data.message || "Error al eliminar la promoción");
           }
-        }
+        },
       });
     },
   };
@@ -1103,42 +1140,47 @@
   // Inicializar cuando el DOM esté listo
   $(document).ready(function () {
     SCL.init();
-    
+
     // Botón crear promoción
-    $(document).on('click', '#scl-btn-nueva-promocion, #scl-btn-nueva-promocion-inline', function(e) {
-      e.preventDefault();
-      SCL.openPromocionModal();
-    });
-    
+    $(document).on(
+      "click",
+      "#scl-btn-nueva-promocion, #scl-btn-nueva-promocion-inline",
+      function (e) {
+        e.preventDefault();
+        SCL.openPromocionModal();
+      },
+    );
+
     // Botón editar promoción
-    $(document).on('click', '.scl-btn-editar-promocion', function(e) {
+    $(document).on("click", ".scl-btn-editar-promocion", function (e) {
       e.preventDefault();
-      const promocionId = $(this).data('id');
+      const promocionId = $(this).data("id");
       SCL.openPromocionModal(promocionId);
     });
-    
+
     // Botón eliminar promoción
-    $(document).on('click', '.scl-btn-eliminar-promocion', function(e) {
+    $(document).on("click", ".scl-btn-eliminar-promocion", function (e) {
       e.preventDefault();
-      const promocionId = $(this).data('id');
+      const promocionId = $(this).data("id");
       SCL.deletePromocion(promocionId);
     });
-    
+
     // Submit del formulario de promoción
-    $(document).on('submit', '#scl-promocion-form', function(e) {
+    $(document).on("submit", "#scl-promocion-form", function (e) {
       SCL.submitPromocionForm(e);
     });
-    
+
     // Preview de imagen
-    $(document).on('change', '#scl-promo-imagen', function(e) {
+    $(document).on("change", "#scl-promo-imagen", function (e) {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-          $('#scl-promo-imagen-preview img').attr('src', e.target.result);
-          $('#scl-promo-imagen-preview').show();
+        reader.onload = function (e) {
+          $("#scl-promo-imagen-preview img").attr("src", e.target.result);
+          $("#scl-promo-imagen-preview").show();
         };
         reader.readAsDataURL(file);
       }
-    });  });
+    });
+  });
 })(jQuery);

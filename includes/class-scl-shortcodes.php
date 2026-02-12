@@ -23,6 +23,7 @@ class SCL_Shortcodes
     public static function init()
     {
         add_shortcode('scl_grid', array(__CLASS__, 'render_grid'));
+        add_shortcode('scl_grid_gold', array(__CLASS__, 'render_grid_gold'));
         add_shortcode('scl_cupones', array(__CLASS__, 'render_cupones_grid'));
         add_shortcode('scl_solicitud', array(__CLASS__, 'render_solicitud_form'));
         add_shortcode('scl_user_dashboard', array(__CLASS__, 'render_user_dashboard'));
@@ -341,12 +342,319 @@ class SCL_Shortcodes
     }
 
     /**
+     * Parsear parámetro de niveles
+     * Formato: "{role_slug, #color, priority};{role_slug2, #color2, priority2};"
+     * 
+     * @param string $level_string String con los niveles
+     * @return array Array de niveles parseados y ordenados por prioridad
+     */
+    private static function parse_levels($level_string)
+    {
+        $levels = array();
+
+        if (empty($level_string)) {
+            // Niveles por defecto
+            return array(
+                array('role' => 'socio_gold', 'color' => '#d4af37', 'priority' => 0),
+                array('role' => '', 'color' => '#9ca3af', 'priority' => 999) // Sin rol = prioridad baja
+            );
+        }
+
+        // Dividir por punto y coma
+        $level_parts = explode(';', trim($level_string, ';'));
+
+        foreach ($level_parts as $part) {
+            $part = trim($part);
+            if (empty($part)) continue;
+
+            // Extraer contenido entre llaves
+            if (preg_match('/\{([^}]+)\}/', $part, $matches)) {
+                $content = $matches[1];
+                $values = array_map('trim', explode(',', $content));
+
+                if (count($values) >= 3) {
+                    $role = sanitize_text_field($values[0]);
+                    $color = sanitize_hex_color($values[1]);
+                    $priority = intval($values[2]);
+
+                    if ($color) {
+                        $levels[] = array(
+                            'role' => $role,
+                            'color' => $color,
+                            'priority' => $priority
+                        );
+                    }
+                }
+            }
+        }
+
+        // Ordenar por prioridad (menor número = mayor prioridad)
+        usort($levels, function ($a, $b) {
+            return $a['priority'] - $b['priority'];
+        });
+
+        // Agregar nivel por defecto para usuarios sin rol específico
+        $levels[] = array('role' => '', 'color' => '#cccccc', 'priority' => 999);
+
+        return $levels;
+    }
+
+    /**
+     * Shortcode: Grid con múltiples niveles de socios
+     * [scl_grid_gold categoria="" columns="3" per_page="12" level="{socio_gold, #ff6b35, 0};{socio_silver, #c0c0c0, 1};"]
+     *
+     * @param array $atts Atributos del shortcode.
+     * @return string
+     */
+    public static function render_grid_gold($atts)
+    {
+        $atts = shortcode_atts(array(
+            'categoria'          => '',
+            'limit'              => -1,
+            'columns'            => 3,
+            'per_page'           => 12,
+            'pagination_type'    => 'default', // default, lazy, load_more
+            'search_placeholder' => '', // Texto personalizado para el buscador
+            'level'              => '', // Niveles: "{role, color, priority};..."
+        ), $atts, 'scl_grid_gold');
+
+        // Determinar posts_per_page basado en paginación
+        $posts_per_page = intval($atts['per_page']);
+        if ($posts_per_page <= 0) {
+            $posts_per_page = 12; // Default
+        }
+
+        // Parsear niveles
+        $levels = self::parse_levels($atts['level']);
+
+        // Obtener TODOS los establecimientos primero para ordenar por rol
+        $args = array(
+            'post_type'      => 'establecimiento',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1, // Obtener todos
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+        );
+
+        // Filtrar por categoría si se especifica
+        $categoria_filter = '';
+        if (! empty($atts['categoria'])) {
+            $args['tax_query'] = array(
+                array(
+                    'taxonomy' => 'categoria_establecimiento',
+                    'field'    => 'slug',
+                    'terms'    => sanitize_text_field($atts['categoria']),
+                ),
+            );
+            $categoria_filter = sanitize_text_field($atts['categoria']);
+        }
+
+        $all_establecimientos = new WP_Query($args);
+
+        // Agrupar establecimientos por nivel
+        $posts_by_level = array();
+
+        // Inicializar arrays para cada nivel
+        foreach ($levels as $level_index => $level) {
+            $posts_by_level[$level_index] = array();
+        }
+
+        if ($all_establecimientos->have_posts()) {
+            while ($all_establecimientos->have_posts()) {
+                $all_establecimientos->the_post();
+                $post_id = get_the_ID();
+                $author_id = get_post_field('post_author', $post_id);
+                $user = get_userdata($author_id);
+
+                // Determinar en qué nivel va este establecimiento
+                $assigned = false;
+                foreach ($levels as $level_index => $level) {
+                    // Si el nivel no tiene rol (nivel por defecto), skip por ahora
+                    if (empty($level['role'])) continue;
+
+                    if ($user && in_array($level['role'], (array) $user->roles)) {
+                        $posts_by_level[$level_index][] = $post_id;
+                        $assigned = true;
+                        break; // Asignar solo al primer nivel que coincida
+                    }
+                }
+
+                // Si no se asignó a ningún nivel con rol, asignar al último (sin rol)
+                if (!$assigned) {
+                    $last_level_index = count($levels) - 1;
+                    $posts_by_level[$last_level_index][] = $post_id;
+                }
+            }
+            wp_reset_postdata();
+        }
+
+        // Combinar posts ordenados por prioridad de nivel
+        $ordered_ids = array();
+        foreach ($posts_by_level as $level_posts) {
+            $ordered_ids = array_merge($ordered_ids, $level_posts);
+        }
+
+        // Ahora hacer la query paginada con el orden personalizado
+        $paged = 1;
+        $offset = 0;
+
+        // Obtener solo los IDs para la página actual
+        $current_page_ids = array_slice($ordered_ids, $offset, $posts_per_page);
+
+        // Si no hay IDs para mostrar, mostrar mensaje
+        $max_pages = ceil(count($ordered_ids) / $posts_per_page);
+
+        // Obtener categorías para el filtro dropdown
+        $categorias_dropdown = array();
+        if (!empty($categoria_filter)) {
+            $parent_term = get_term_by('slug', $categoria_filter, 'categoria_establecimiento');
+            if ($parent_term) {
+                $categorias_dropdown = get_terms(array(
+                    'taxonomy'   => 'categoria_establecimiento',
+                    'hide_empty' => true,
+                    'parent'     => $parent_term->term_id,
+                ));
+            }
+        } else {
+            // Sin filtro, mostrar todas las categorías padre
+            $categorias_dropdown = get_terms(array(
+                'taxonomy'   => 'categoria_establecimiento',
+                'hide_empty' => true,
+                'parent'     => 0,
+            ));
+        }
+
+        // Obtener tags para sugerencias
+        $tags = get_terms(array(
+            'taxonomy'   => 'tag_busqueda',
+            'hide_empty' => true,
+        ));
+
+        ob_start();
+    ?>
+        <div class="scl-container scl-container-gold"
+            data-pagination-type="<?php echo esc_attr($atts['pagination_type']); ?>"
+            data-per-page="<?php echo esc_attr($posts_per_page); ?>"
+            data-categoria-filter="<?php echo esc_attr($categoria_filter); ?>"
+            data-columns="<?php echo esc_attr($atts['columns']); ?>"
+            data-is-gold="1"
+            data-levels="<?php echo esc_attr(json_encode($levels)); ?>">
+
+            <!-- Buscador -->
+            <div class="scl-search-wrapper">
+                <div class="scl-search-box">
+                    <input
+                        type="text"
+                        id="scl-search-input"
+                        class="scl-search-input"
+                        placeholder="<?php echo esc_attr(!empty($atts['search_placeholder']) ? $atts['search_placeholder'] : __('Buscar Establecimiento...', 'simple-cards-listings')); ?>"
+                        autocomplete="off">
+
+                    <!-- Dropdown de categorías (solo si hay categorías) -->
+                    <?php if (!empty($categorias_dropdown) && !is_wp_error($categorias_dropdown)) : ?>
+                        <select id="scl-category-filter" class="scl-category-filter">
+                            <option value=""><?php esc_html_e('Todas las categorías', 'simple-cards-listings'); ?></option>
+                            <?php foreach ($categorias_dropdown as $cat) : ?>
+                                <option value="<?php echo esc_attr($cat->slug); ?>">
+                                    <?php echo esc_html($cat->name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+
+                    <button type="button" class="scl-search-button" aria-label="<?php esc_attr_e('Buscar', 'simple-cards-listings'); ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Sugerencias de búsqueda -->
+                <div id="scl-search-suggestions" class="scl-search-suggestions" style="display: none;">
+                    <?php foreach ($tags as $tag) : ?>
+                        <div class="scl-suggestion-item" data-term="<?php echo esc_attr($tag->name); ?>">
+                            <?php echo esc_html($tag->name); ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Grid de establecimientos -->
+            <div class="scl-grid scl-grid-<?php echo esc_attr($atts['columns']); ?>" id="scl-grid">
+                <?php if (!empty($current_page_ids)) : ?>
+                    <?php foreach ($current_page_ids as $post_id) : ?>
+                        <?php echo self::render_card_item($post_id, true, '', '', '', $levels); ?>
+                    <?php endforeach; ?>
+                <?php else : ?>
+                    <p class="scl-no-results"><?php esc_html_e('No se encontraron establecimientos.', 'simple-cards-listings'); ?></p>
+                <?php endif; ?>
+            </div>
+
+            <!-- Mensaje de no resultados -->
+            <div id="scl-no-results" class="scl-no-results" style="display: none;">
+                <?php esc_html_e('No se encontraron resultados para tu búsqueda.', 'simple-cards-listings'); ?>
+            </div>
+
+            <!-- Área de paginación -->
+            <div class="scl-pagination-wrapper">
+                <?php if ($atts['pagination_type'] === 'load_more' && $max_pages > 1) : ?>
+                    <button type="button" class="scl-load-more-btn" data-page="1" data-max-pages="<?php echo esc_attr($max_pages); ?>">
+                        <?php esc_html_e('Cargar más', 'simple-cards-listings'); ?>
+                    </button>
+                <?php elseif ($atts['pagination_type'] === 'default' && $max_pages > 1) : ?>
+                    <div class="scl-pagination" data-current-page="1" data-max-pages="<?php echo esc_attr($max_pages); ?>">
+                        <?php
+                        echo paginate_links(array(
+                            'total'   => $max_pages,
+                            'current' => 1,
+                            'format'  => '?paged=%#%',
+                            'prev_text' => '&laquo;',
+                            'next_text' => '&raquo;',
+                        ));
+                        ?>
+                    </div>
+                <?php endif; ?>
+                <!-- Para lazy load, el scroll se detecta automáticamente -->
+                <?php if ($atts['pagination_type'] === 'lazy') : ?>
+                    <div class="scl-lazy-loader" style="display: none;" data-page="1" data-max-pages="<?php echo esc_attr($max_pages); ?>">
+                        <div class="scl-loading"></div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Modal de establecimiento -->
+        <div id="scl-modal" class="scl-modal" style="display: none;">
+            <div class="scl-modal-overlay"></div>
+            <div class="scl-modal-content">
+                <button type="button" class="scl-modal-close" aria-label="<?php esc_attr_e('Cerrar', 'simple-cards-listings'); ?>">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+                <div class="scl-modal-body" id="scl-modal-body">
+                    <!-- Contenido cargado via AJAX -->
+                </div>
+            </div>
+        </div>
+    <?php
+        return ob_get_clean();
+    }
+
+    /**
      * Renderizar item de la carta (logo)
      *
      * @param int $post_id ID del post.
+     * @param bool $check_gold Si debe verificar el rol del autor.
+     * @param string $role_slug (Deprecated) Slug del rol a verificar.
+     * @param string $color_premium (Deprecated) Color hexadecimal para usuarios premium.
+     * @param string $color_normal (Deprecated) Color hexadecimal para usuarios normales.
+     * @param array $levels Array de niveles con roles, colores y prioridades.
      * @return string
      */
-    public static function render_card_item($post_id)
+    public static function render_card_item($post_id, $check_gold = false, $role_slug = '', $color_premium = '', $color_normal = '', $levels = array())
     {
         $logo_id = SCL_Metaboxes::get_meta($post_id, 'logo');
         $logo_url = '';
@@ -361,11 +669,62 @@ class SCL_Shortcodes
 
         $title = get_the_title($post_id);
 
+        // Determinar clase y color según nivel del autor
+        $card_class = 'scl-card-item';
+        $border_color = '';
+        $shadow_color = '';
+
+        if ($check_gold && !empty($levels)) {
+            $author_id = get_post_field('post_author', $post_id);
+            $user = get_userdata($author_id);
+
+            // Buscar el nivel correspondiente al usuario
+            $matched_level = null;
+            $level_priority = 999;
+            foreach ($levels as $level) {
+                // Si el nivel no tiene rol, es el nivel por defecto
+                if (empty($level['role'])) {
+                    if (!$matched_level) { // Solo usar como fallback si no hay match
+                        $matched_level = $level;
+                        $level_priority = isset($level['priority']) ? $level['priority'] : 999;
+                    }
+                    continue;
+                }
+
+                if ($user && in_array($level['role'], (array) $user->roles)) {
+                    $matched_level = $level;
+                    $level_priority = isset($level['priority']) ? $level['priority'] : 999;
+                    break; //Usar el primer nivel que coincida
+                }
+            }
+
+            if ($matched_level) {
+                $card_class .= ' scl-card-badge';
+
+                // Agregar clase especial para el nivel de máxima prioridad (0)
+                if ($level_priority === 0) {
+                    $card_class .= ' scl-card-badge-premium';
+                }
+
+                $border_color = $matched_level['color'];
+                // Crear color de sombra con opacidad
+                $shadow_color = $border_color . '4D'; // 30% opacity
+            }
+        }
+
         ob_start();
     ?>
-        <div class="scl-card-item" data-id="<?php echo esc_attr($post_id); ?>">
-            <div class="scl-card-logo">
-                <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?>">
+        <div class="<?php echo esc_attr($card_class); ?>"
+            data-id="<?php echo esc_attr($post_id); ?>"
+            <?php if (!empty($border_color)) : ?>
+            style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
+            <?php endif; ?>>
+            <div class="scl-card-badge-outer">
+                <div class="scl-card-badge-inner">
+                    <div class="scl-card-logo">
+                        <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?>">
+                    </div>
+                </div>
             </div>
         </div>
     <?php
@@ -609,7 +968,6 @@ class SCL_Shortcodes
                                     <th><?php esc_html_e('Logo', 'simple-cards-listings'); ?></th>
                                     <th><?php esc_html_e('Nombre', 'simple-cards-listings'); ?></th>
                                     <th><?php esc_html_e('Estado', 'simple-cards-listings'); ?></th>
-                                    <th><?php esc_html_e('Fecha', 'simple-cards-listings'); ?></th>
                                     <th><?php esc_html_e('Acciones', 'simple-cards-listings'); ?></th>
                                 </tr>
                             </thead>
@@ -633,16 +991,10 @@ class SCL_Shortcodes
                                         <td>
                                             <?php echo self::get_status_badge($status); ?>
                                         </td>
-                                        <td><?php echo get_the_date(); ?></td>
                                         <td class="scl-td-actions">
                                             <button type="button" class="scl-btn scl-btn-small scl-btn-edit" data-id="<?php echo esc_attr($post_id); ?>">
                                                 <?php esc_html_e('Editar', 'simple-cards-listings'); ?>
                                             </button>
-                                            <?php if ('publish' === $status) : ?>
-                                                <button type="button" class="scl-btn scl-btn-small scl-btn-view" data-id="<?php echo esc_attr($post_id); ?>">
-                                                    <?php esc_html_e('Ver', 'simple-cards-listings'); ?>
-                                                </button>
-                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>
