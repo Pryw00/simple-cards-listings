@@ -1202,6 +1202,59 @@ class SCL_Ajax_Handlers
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
         $categoria_base = isset($_POST['categoria_base']) ? sanitize_text_field($_POST['categoria_base']) : '';
 
+        // Si no hay búsqueda ni categoría del dropdown, usar query simplificada
+        if (empty($search_term) && empty($category_selected)) {
+            $simple_args = array(
+                'post_type' => 'promocion',
+                'post_status' => 'publish',
+                'posts_per_page' => -1,
+                'orderby' => 'date',
+                'order' => 'DESC',
+            );
+
+            // Si hay categoria_base, filtrar por ella
+            if (!empty($categoria_base)) {
+                $cat_base = get_term_by('slug', $categoria_base, 'categoria_promocion');
+                if ($cat_base) {
+                    $simple_args['tax_query'] = array(
+                        array(
+                            'taxonomy' => 'categoria_promocion',
+                            'field'    => 'term_id',
+                            'terms'    => $cat_base->term_id,
+                            'include_children' => true,
+                        ),
+                    );
+                }
+            }
+
+            $query = new WP_Query($simple_args);
+            $html = '';
+
+            // Parsear niveles si se proporcionaron
+            $levels_json = isset($_POST['levels']) ? sanitize_text_field($_POST['levels']) : '';
+            $levels = array();
+            if (!empty($levels_json) && $levels_json !== 'null' && $levels_json !== '""') {
+                $decoded = json_decode(stripslashes($levels_json), true);
+                if (is_array($decoded)) {
+                    $levels = $decoded;
+                }
+            }
+
+            if ($query->have_posts()) {
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    $html .= SCL_Shortcodes::render_cupon_card(get_the_ID(), $levels);
+                }
+                wp_reset_postdata();
+            }
+
+            wp_send_json_success(array(
+                'html' => $html,
+                'found' => $query->found_posts,
+            ));
+            return;
+        }
+
         // Formato de datetime-local: YYYY-MM-DDTHH:MM
         $ahora = current_time('Y-m-d\TH:i');
 
@@ -1248,7 +1301,7 @@ class SCL_Ajax_Handlers
         // Meta query con OR para manejar campos vacíos
         $meta_query = array('relation' => 'AND');
 
-        // Filtrar que no haya expirado
+        // Filtrar que no haya expirado (fecha_fin >= ahora, o no existe, o está vacío)
         $meta_query[] = array(
             'relation' => 'OR',
             array(
@@ -1261,9 +1314,14 @@ class SCL_Ajax_Handlers
                 'key' => '_scl_fecha_fin',
                 'compare' => 'NOT EXISTS',
             ),
+            array(
+                'key' => '_scl_fecha_fin',
+                'value' => '',
+                'compare' => '=',
+            ),
         );
 
-        // Filtrar que ya haya iniciado
+        // Filtrar que ya haya iniciado (fecha_inicio <= ahora, o no existe, o está vacío)
         $meta_query[] = array(
             'relation' => 'OR',
             array(
@@ -1275,6 +1333,11 @@ class SCL_Ajax_Handlers
             array(
                 'key' => '_scl_fecha_inicio',
                 'compare' => 'NOT EXISTS',
+            ),
+            array(
+                'key' => '_scl_fecha_inicio',
+                'value' => '',
+                'compare' => '=',
             ),
         );
 
@@ -1328,6 +1391,11 @@ class SCL_Ajax_Handlers
                                 'key' => '_scl_fecha_fin',
                                 'compare' => 'NOT EXISTS',
                             ),
+                            array(
+                                'key' => '_scl_fecha_fin',
+                                'value' => '',
+                                'compare' => '=',
+                            ),
                         ),
                         array(
                             'relation' => 'OR',
@@ -1340,6 +1408,11 @@ class SCL_Ajax_Handlers
                             array(
                                 'key' => '_scl_fecha_inicio',
                                 'compare' => 'NOT EXISTS',
+                            ),
+                            array(
+                                'key' => '_scl_fecha_inicio',
+                                'value' => '',
+                                'compare' => '=',
                             ),
                         ),
                     ),
