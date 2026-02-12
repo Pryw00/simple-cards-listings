@@ -724,31 +724,31 @@ class SCL_Shortcodes
         ob_start();
     ?>
         <?php if ($only_link === 'true' && !empty($website_url)) : ?>
-        <a href="<?php echo esc_url($website_url); ?>"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="<?php echo esc_attr($card_class); ?>"
-            <?php if (!empty($border_color)) : ?>
-            style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
-            <?php endif; ?>>
-        <?php else : ?>
-        <div class="<?php echo esc_attr($card_class); ?>"
-            data-id="<?php echo esc_attr($post_id); ?>"
-            <?php if (!empty($border_color)) : ?>
-            style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
-            <?php endif; ?>>
-        <?php endif; ?>
-            <div class="scl-card-badge-outer">
-                <div class="scl-card-badge-inner">
-                    <div class="scl-card-logo">
-                        <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?>">
+            <a href="<?php echo esc_url($website_url); ?>"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="<?php echo esc_attr($card_class); ?>"
+                <?php if (!empty($border_color)) : ?>
+                style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
+                <?php endif; ?>>
+            <?php else : ?>
+                <div class="<?php echo esc_attr($card_class); ?>"
+                    data-id="<?php echo esc_attr($post_id); ?>"
+                    <?php if (!empty($border_color)) : ?>
+                    style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
+                    <?php endif; ?>>
+                <?php endif; ?>
+                <div class="scl-card-badge-outer">
+                    <div class="scl-card-badge-inner">
+                        <div class="scl-card-logo">
+                            <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?>">
+                        </div>
                     </div>
                 </div>
-            </div>
-        <?php if ($only_link === 'true' && !empty($website_url)) : ?>
-        </a>
+                <?php if ($only_link === 'true' && !empty($website_url)) : ?>
+            </a>
         <?php else : ?>
-        </div>
+            </div>
         <?php endif; ?>
     <?php
         return ob_get_clean();

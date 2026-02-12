@@ -64,7 +64,8 @@
         this.paginationConfig.isGold = $container.data("is-gold")
           ? true
           : false;
-        this.paginationConfig.onlyLink = $container.data("only-link") || "false";
+        this.paginationConfig.onlyLink =
+          $container.data("only-link") || "false";
 
         // Parsear niveles del data attribute
         const levelsData = $container.data("levels");
@@ -682,9 +683,9 @@
      */
     openModal: function (e) {
       const $target = $(e.currentTarget);
-      
+
       // No abrir modal si el elemento es un enlace (only_link=true)
-      if ($target.is('a') || !$target.data('id')) {
+      if ($target.is("a") || !$target.data("id")) {
         return;
       }
 
