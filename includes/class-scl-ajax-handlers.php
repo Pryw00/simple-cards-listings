@@ -268,6 +268,7 @@ class SCL_Ajax_Handlers
         $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
         $categoria_filter = isset($_POST['categoria_filter']) ? sanitize_text_field($_POST['categoria_filter']) : '';
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
+        $ubicacion_selected = isset($_POST['ubicacion_selected']) ? sanitize_text_field($_POST['ubicacion_selected']) : '';
         $is_gold = isset($_POST['is_gold']) ? (bool) $_POST['is_gold'] : false;
         $only_link = isset($_POST['only_link']) ? sanitize_text_field($_POST['only_link']) : 'false';
 
@@ -414,6 +415,14 @@ class SCL_Ajax_Handlers
                 );
             }
 
+            if (!empty($ubicacion_selected)) {
+                $tax_query[] = array(
+                    'taxonomy' => 'ubicacion_establecimiento',
+                    'field'    => 'slug',
+                    'terms'    => $ubicacion_selected,
+                );
+            }
+
             if (count($tax_query) > 1) {
                 $args['tax_query'] = $tax_query;
             }
@@ -539,6 +548,12 @@ class SCL_Ajax_Handlers
             wp_set_object_terms($post_id, $tag_ids, 'tag_busqueda');
         }
 
+        // Asignar ubicaciones
+        if (! empty($_POST['ubicaciones']) && is_array($_POST['ubicaciones'])) {
+            $ubicacion_ids = array_map('absint', $_POST['ubicaciones']);
+            wp_set_object_terms($post_id, $ubicacion_ids, 'ubicacion_establecimiento');
+        }
+
         // Subir archivos
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -661,10 +676,12 @@ class SCL_Ajax_Handlers
         // Categorías y tags
         $categorias = get_terms(array('taxonomy' => 'categoria_establecimiento', 'hide_empty' => false));
         $tags = get_terms(array('taxonomy' => 'tag_busqueda', 'hide_empty' => false));
+        $ubicaciones = get_terms(array('taxonomy' => 'ubicacion_establecimiento', 'hide_empty' => false));
         $selected_cats = wp_get_post_terms($post_id, 'categoria_establecimiento', array('fields' => 'ids'));
         $selected_tags = wp_get_post_terms($post_id, 'tag_busqueda', array('fields' => 'ids'));
+        $selected_ubicaciones = wp_get_post_terms($post_id, 'ubicacion_establecimiento', array('fields' => 'ids'));
 
-        $html = self::render_edit_form($data, $categorias, $tags, $selected_cats, $selected_tags);
+        $html = self::render_edit_form($data, $categorias, $tags, $ubicaciones, $selected_cats, $selected_tags, $selected_ubicaciones);
 
         wp_send_json_success(array('html' => $html));
     }
@@ -672,7 +689,7 @@ class SCL_Ajax_Handlers
     /**
      * Renderizar formulario de edición
      */
-    private static function render_edit_form($data, $categorias, $tags, $selected_cats, $selected_tags)
+    private static function render_edit_form($data, $categorias, $tags, $ubicaciones, $selected_cats, $selected_tags, $selected_ubicaciones)
     {
         $logo_url = $data['logo_id'] ? wp_get_attachment_image_url($data['logo_id'], 'thumbnail') : '';
         $imagen_url = $data['imagen_id'] ? wp_get_attachment_image_url($data['imagen_id'], 'thumbnail') : '';
@@ -716,6 +733,19 @@ class SCL_Ajax_Handlers
                             <input type="checkbox" name="tags[]" value="<?php echo esc_attr($tag->term_id); ?>"
                                 <?php checked(in_array($tag->term_id, $selected_tags)); ?>>
                             <?php echo esc_html($tag->name); ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div class="scl-form-row">
+                <label><?php esc_html_e('Ubicación', 'simple-cards-listings'); ?></label>
+                <div class="scl-checkbox-group">
+                    <?php foreach ($ubicaciones as $ubicacion) : ?>
+                        <label class="scl-checkbox-label">
+                            <input type="checkbox" name="ubicaciones[]" value="<?php echo esc_attr($ubicacion->term_id); ?>"
+                                <?php checked(in_array($ubicacion->term_id, $selected_ubicaciones)); ?>>
+                            <?php echo esc_html($ubicacion->name); ?>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -856,6 +886,14 @@ class SCL_Ajax_Handlers
             wp_set_object_terms($post_id, array(), 'tag_busqueda');
         }
 
+        // Actualizar ubicaciones
+        if (! empty($_POST['ubicaciones']) && is_array($_POST['ubicaciones'])) {
+            $ubicacion_ids = array_map('absint', $_POST['ubicaciones']);
+            wp_set_object_terms($post_id, $ubicacion_ids, 'ubicacion_establecimiento');
+        } else {
+            wp_set_object_terms($post_id, array(), 'ubicacion_establecimiento');
+        }
+
         // Subir archivos si hay nuevos
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -941,6 +979,7 @@ class SCL_Ajax_Handlers
         $categoria_filter = isset($_POST['categoria_filter']) ? sanitize_text_field($_POST['categoria_filter']) : '';
         $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
+        $ubicacion_selected = isset($_POST['ubicacion_selected']) ? sanitize_text_field($_POST['ubicacion_selected']) : '';
         $is_gold = isset($_POST['is_gold']) ? (bool) $_POST['is_gold'] : false;
         $only_link = isset($_POST['only_link']) ? sanitize_text_field($_POST['only_link']) : 'false';
 
@@ -992,6 +1031,15 @@ class SCL_Ajax_Handlers
                 'taxonomy' => 'categoria_establecimiento',
                 'field'    => 'slug',
                 'terms'    => $category_selected,
+            );
+        }
+
+        // Filtro de ubicación desde dropdown
+        if (!empty($ubicacion_selected)) {
+            $tax_query[] = array(
+                'taxonomy' => 'ubicacion_establecimiento',
+                'field'    => 'slug',
+                'terms'    => $ubicacion_selected,
             );
         }
 

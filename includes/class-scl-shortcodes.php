@@ -170,6 +170,7 @@ class SCL_Shortcodes
             'per_page'           => 12,
             'pagination_type'    => 'default', // default, lazy, load_more
             'search_placeholder' => '', // Texto personalizado para el buscador
+            'filterloc'          => 'false', // true: mostrar filtro de ubicación
         ), $atts, 'scl_grid');
 
         // Determinar posts_per_page basado en paginación
@@ -223,6 +224,15 @@ class SCL_Shortcodes
             ));
         }
 
+        // Obtener ubicaciones si filterloc='true'
+        $ubicaciones_dropdown = array();
+        if ($atts['filterloc'] === 'true') {
+            $ubicaciones_dropdown = get_terms(array(
+                'taxonomy'   => 'ubicacion_establecimiento',
+                'hide_empty' => true,
+            ));
+        }
+
         // Obtener tags para sugerencias
         $tags = get_terms(array(
             'taxonomy'   => 'tag_busqueda',
@@ -235,7 +245,8 @@ class SCL_Shortcodes
             data-pagination-type="<?php echo esc_attr($atts['pagination_type']); ?>"
             data-per-page="<?php echo esc_attr($posts_per_page); ?>"
             data-categoria-filter="<?php echo esc_attr($categoria_filter); ?>"
-            data-columns="<?php echo esc_attr($atts['columns']); ?>">
+            data-columns="<?php echo esc_attr($atts['columns']); ?>"
+            data-filterloc="<?php echo esc_attr($atts['filterloc']); ?>">
 
             <!-- Buscador -->
             <div class="scl-search-wrapper">
@@ -254,6 +265,18 @@ class SCL_Shortcodes
                             <?php foreach ($categorias_dropdown as $cat) : ?>
                                 <option value="<?php echo esc_attr($cat->slug); ?>">
                                     <?php echo esc_html($cat->name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+
+                    <!-- Dropdown de ubicaciones (solo si filterloc='true') -->
+                    <?php if (!empty($ubicaciones_dropdown) && !is_wp_error($ubicaciones_dropdown)) : ?>
+                        <select id="scl-ubicacion-filter" class="scl-ubicacion-filter">
+                            <option value=""><?php esc_html_e('Todas las ubicaciones', 'simple-cards-listings'); ?></option>
+                            <?php foreach ($ubicaciones_dropdown as $ubicacion) : ?>
+                                <option value="<?php echo esc_attr($ubicacion->slug); ?>">
+                                    <?php echo esc_html($ubicacion->name); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -417,6 +440,7 @@ class SCL_Shortcodes
             'search_placeholder' => '', // Texto personalizado para el buscador
             'level'              => '', // Niveles: "{role, color, priority};..."
             'only_link'          => 'false', // true: abre sitio web, false: abre modal
+            'filterloc'          => 'false', // true: mostrar filtro de ubicación
         ), $atts, 'scl_grid_gold');
 
         // Determinar posts_per_page basado en paginación
@@ -525,6 +549,15 @@ class SCL_Shortcodes
             ));
         }
 
+        // Obtener ubicaciones si filterloc='true'
+        $ubicaciones_dropdown = array();
+        if ($atts['filterloc'] === 'true') {
+            $ubicaciones_dropdown = get_terms(array(
+                'taxonomy'   => 'ubicacion_establecimiento',
+                'hide_empty' => true,
+            ));
+        }
+
         // Obtener tags para sugerencias
         $tags = get_terms(array(
             'taxonomy'   => 'tag_busqueda',
@@ -540,7 +573,8 @@ class SCL_Shortcodes
             data-columns="<?php echo esc_attr($atts['columns']); ?>"
             data-is-gold="1"
             data-only-link="<?php echo esc_attr($atts['only_link']); ?>"
-            data-levels="<?php echo esc_attr(json_encode($levels)); ?>">
+            data-levels="<?php echo esc_attr(json_encode($levels)); ?>"
+            data-filterloc="<?php echo esc_attr($atts['filterloc']); ?>">
 
             <!-- Buscador -->
             <div class="scl-search-wrapper">
@@ -559,6 +593,18 @@ class SCL_Shortcodes
                             <?php foreach ($categorias_dropdown as $cat) : ?>
                                 <option value="<?php echo esc_attr($cat->slug); ?>">
                                     <?php echo esc_html($cat->name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+
+                    <!-- Dropdown de ubicaciones (solo si filterloc='true') -->
+                    <?php if (!empty($ubicaciones_dropdown) && !is_wp_error($ubicaciones_dropdown)) : ?>
+                        <select id="scl-ubicacion-filter" class="scl-ubicacion-filter">
+                            <option value=""><?php esc_html_e('Todas las ubicaciones', 'simple-cards-listings'); ?></option>
+                            <?php foreach ($ubicaciones_dropdown as $ubicacion) : ?>
+                                <option value="<?php echo esc_attr($ubicacion->slug); ?>">
+                                    <?php echo esc_html($ubicacion->name); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -641,7 +687,7 @@ class SCL_Shortcodes
                 </div>
             </div>
         </div>
-    <?php
+        <?php
         return ob_get_clean();
     }
 
@@ -722,34 +768,54 @@ class SCL_Shortcodes
         }
 
         ob_start();
-    ?>
-        <?php if ($only_link === 'true' && !empty($website_url)) : ?>
-            <a href="<?php echo esc_url($website_url); ?>"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="<?php echo esc_attr($card_class); ?>"
-                <?php if (!empty($border_color)) : ?>
-                style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
-                <?php endif; ?>>
-            <?php else : ?>
-                <div class="<?php echo esc_attr($card_class); ?>"
-                    data-id="<?php echo esc_attr($post_id); ?>"
+
+        // Determinar si usar diseño de medallón o card normal
+        $use_badge_design = $check_gold && !empty($levels) && !empty($matched_level);
+
+        if ($use_badge_design) {
+            // Diseño de medallón para grid gold
+        ?>
+            <?php if ($only_link === 'true' && !empty($website_url)) : ?>
+                <a href="<?php echo esc_url($website_url); ?>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="<?php echo esc_attr($card_class); ?>"
                     <?php if (!empty($border_color)) : ?>
                     style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
                     <?php endif; ?>>
-                <?php endif; ?>
-                <div class="scl-card-badge-outer">
-                    <div class="scl-card-badge-inner">
-                        <div class="scl-card-logo">
-                            <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?>">
+                <?php else : ?>
+                    <div class="<?php echo esc_attr($card_class); ?>"
+                        data-id="<?php echo esc_attr($post_id); ?>"
+                        <?php if (!empty($border_color)) : ?>
+                        style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
+                        <?php endif; ?>>
+                    <?php endif; ?>
+                    <div class="scl-card-badge-outer">
+                        <div class="scl-card-badge-inner">
+                            <div class="scl-card-logo">
+                                <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?>">
+                            </div>
                         </div>
                     </div>
+                    <?php if ($only_link === 'true' && !empty($website_url)) : ?>
+                </a>
+            <?php else : ?>
                 </div>
-                <?php if ($only_link === 'true' && !empty($website_url)) : ?>
-            </a>
-        <?php else : ?>
+            <?php endif; ?>
+        <?php
+        } else {
+            // Diseño normal de card para grid estándar
+        ?>
+            <div class="<?php echo esc_attr($card_class); ?>"
+                data-id="<?php echo esc_attr($post_id); ?>">
+                <div class="scl-card-logo">
+                    <img src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr($title); ?>">
+                </div>
             </div>
-        <?php endif; ?>
+        <?php
+        }
+
+        ?>
     <?php
         return ob_get_clean();
     }
@@ -779,6 +845,12 @@ class SCL_Shortcodes
         // Obtener tags
         $tags = get_terms(array(
             'taxonomy'   => 'tag_busqueda',
+            'hide_empty' => false,
+        ));
+
+        // Obtener ubicaciones
+        $ubicaciones = get_terms(array(
+            'taxonomy'   => 'ubicacion_establecimiento',
             'hide_empty' => false,
         ));
 
@@ -817,6 +889,18 @@ class SCL_Shortcodes
                             <label class="scl-checkbox-label">
                                 <input type="checkbox" name="tags[]" value="<?php echo esc_attr($tag->term_id); ?>">
                                 <?php echo esc_html($tag->name); ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="scl-form-row">
+                    <label><?php esc_html_e('Ubicación', 'simple-cards-listings'); ?></label>
+                    <div class="scl-checkbox-group">
+                        <?php foreach ($ubicaciones as $ubicacion) : ?>
+                            <label class="scl-checkbox-label">
+                                <input type="checkbox" name="ubicaciones[]" value="<?php echo esc_attr($ubicacion->term_id); ?>">
+                                <?php echo esc_html($ubicacion->name); ?>
                             </label>
                         <?php endforeach; ?>
                     </div>

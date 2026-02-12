@@ -142,6 +142,13 @@
         this.handleCategoryFilter.bind(this),
       );
 
+      // Filtro de ubicación
+      $(document).on(
+        "change",
+        "#scl-ubicacion-filter",
+        this.handleUbicacionFilter.bind(this),
+      );
+
       // Paginación
       $(document).on(
         "click",
@@ -232,6 +239,7 @@
 
       const categorySlug = $(e.target).val();
       const searchTerm = $("#scl-search-input").val().trim();
+      const ubicacionSlug = $("#scl-ubicacion-filter").val() || "";
 
       // Evitar ejecuciones múltiples
       if (this.paginationConfig.isLoading) {
@@ -240,24 +248,46 @@
 
       // Siempre recargar con AJAX cuando cambia el filtro
       this.paginationConfig.currentPage = 1;
-      this.performSearch(searchTerm, categorySlug);
+      this.performSearch(searchTerm, categorySlug, ubicacionSlug);
+    },
+
+    /**
+     * Manejar cambio de filtro de ubicación
+     */
+    handleUbicacionFilter: function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const ubicacionSlug = $(e.target).val();
+      const searchTerm = $("#scl-search-input").val().trim();
+      const categorySlug = $("#scl-category-filter").val() || "";
+
+      // Evitar ejecuciones múltiples
+      if (this.paginationConfig.isLoading) {
+        return;
+      }
+
+      // Siempre recargar con AJAX cuando cambia el filtro
+      this.paginationConfig.currentPage = 1;
+      this.performSearch(searchTerm, categorySlug, ubicacionSlug);
     },
 
     /**
      * Realizar búsqueda (por AJAX, busca en TODA la base de datos)
      */
-    performSearch: function (searchTerm, categorySlug) {
+    performSearch: function (searchTerm, categorySlug, ubicacionSlug) {
       const self = this;
       const $grid = $("#scl-grid");
       const $noResults = $("#scl-no-results");
       const $pagination = $(".scl-pagination-wrapper");
 
       categorySlug = categorySlug || $("#scl-category-filter").val() || "";
+      ubicacionSlug = ubicacionSlug || $("#scl-ubicacion-filter").val() || "";
       searchTerm = searchTerm || "";
 
       // Si no hay búsqueda ni filtro, recargar página inicial
-      if (!searchTerm && !categorySlug) {
-        this.reloadGrid("", "");
+      if (!searchTerm && !categorySlug && !ubicacionSlug) {
+        this.reloadGrid("", "", "");
         return;
       }
 
@@ -278,6 +308,7 @@
           search_term: searchTerm,
           categoria_filter: this.paginationConfig.categoriaFilter,
           category_selected: categorySlug,
+          ubicacion_selected: ubicacionSlug,
           is_gold: this.paginationConfig.isGold || false,
           levels: JSON.stringify(this.paginationConfig.levels || []),
           only_link: this.paginationConfig.onlyLink || "false",
@@ -313,7 +344,7 @@
     /**
      * Recargar grid con AJAX
      */
-    reloadGrid: function (searchTerm, categorySlug) {
+    reloadGrid: function (searchTerm, categorySlug, ubicacionSlug) {
       const self = this;
       const $grid = $("#scl-grid");
       const $pagination = $(".scl-pagination-wrapper");
@@ -334,6 +365,7 @@
           per_page: this.paginationConfig.perPage,
           categoria_filter: this.paginationConfig.categoriaFilter,
           category_selected: categorySlug,
+          ubicacion_selected: ubicacionSlug,
           search_term: searchTerm,
           is_gold: this.paginationConfig.isGold || false,
           levels: JSON.stringify(this.paginationConfig.levels || []),
@@ -448,6 +480,7 @@
       const self = this;
       const $grid = $("#scl-grid");
       const categorySelected = $("#scl-category-filter").val() || "";
+      const ubicacionSelected = $("#scl-ubicacion-filter").val() || "";
       const searchTerm = $("#scl-search-input").val().toLowerCase().trim();
 
       if (this.paginationConfig.isLoading) return;
@@ -475,6 +508,7 @@
           per_page: this.paginationConfig.perPage,
           categoria_filter: this.paginationConfig.categoriaFilter,
           category_selected: categorySelected,
+          ubicacion_selected: ubicacionSelected,
           search_term: searchTerm,
           is_gold: this.paginationConfig.isGold || false,
           levels: JSON.stringify(this.paginationConfig.levels || []),

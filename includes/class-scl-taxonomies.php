@@ -24,6 +24,7 @@ class SCL_Taxonomies
     {
         self::register_categoria_establecimiento();
         self::register_tags_busqueda();
+        self::register_ubicacion_establecimiento();
     }
 
     /**
@@ -112,5 +113,49 @@ class SCL_Taxonomies
         );
 
         register_taxonomy('tag_busqueda', array('establecimiento'), $args);
+    }
+
+    /**
+     * Registrar taxonomía Ubicación de Establecimiento
+     */
+    public static function register_ubicacion_establecimiento()
+    {
+        $labels = array(
+            'name'                       => _x('Ubicaciones', 'taxonomy general name', 'simple-cards-listings'),
+            'singular_name'              => _x('Ubicación', 'taxonomy singular name', 'simple-cards-listings'),
+            'search_items'               => __('Buscar ubicaciones', 'simple-cards-listings'),
+            'popular_items'              => __('Ubicaciones populares', 'simple-cards-listings'),
+            'all_items'                  => __('Todas las ubicaciones', 'simple-cards-listings'),
+            'parent_item'                => null,
+            'parent_item_colon'          => null,
+            'edit_item'                  => __('Editar ubicación', 'simple-cards-listings'),
+            'view_item'                  => __('Ver ubicación', 'simple-cards-listings'),
+            'update_item'                => __('Actualizar ubicación', 'simple-cards-listings'),
+            'add_new_item'               => __('Añadir nueva ubicación', 'simple-cards-listings'),
+            'new_item_name'              => __('Nombre de nueva ubicación', 'simple-cards-listings'),
+            'separate_items_with_commas' => __('Separar ubicaciones con comas', 'simple-cards-listings'),
+            'add_or_remove_items'        => __('Añadir o quitar ubicaciones', 'simple-cards-listings'),
+            'choose_from_most_used'      => __('Elegir de las más usadas', 'simple-cards-listings'),
+            'not_found'                  => __('No se encontraron ubicaciones.', 'simple-cards-listings'),
+            'no_terms'                   => __('No hay ubicaciones', 'simple-cards-listings'),
+            'menu_name'                  => __('Ubicaciones', 'simple-cards-listings'),
+            'items_list_navigation'      => __('Navegación de lista de ubicaciones', 'simple-cards-listings'),
+            'items_list'                 => __('Lista de ubicaciones', 'simple-cards-listings'),
+            'back_to_items'              => __('← Volver a ubicaciones', 'simple-cards-listings'),
+        );
+
+        $args = array(
+            'labels'            => $labels,
+            'hierarchical'      => false,
+            'public'            => true,
+            'show_ui'           => true,
+            'show_admin_column' => true,
+            'show_in_nav_menus' => true,
+            'show_tagcloud'     => true,
+            'show_in_rest'      => true,
+            'rewrite'           => array('slug' => 'ubicacion'),
+        );
+
+        register_taxonomy('ubicacion_establecimiento', array('establecimiento'), $args);
     }
 }
