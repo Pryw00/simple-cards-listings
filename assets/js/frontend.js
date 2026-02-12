@@ -280,18 +280,22 @@
       $grid.html('<div class="scl-loading"></div>');
       $noResults.hide();
 
+      const requestData = {
+        action: "scl_search_cupones",
+        nonce: scl_ajax.nonce,
+        search_term: searchTerm,
+        category_selected: categorySlug,
+        categoria_base: categoriaBase,
+        levels: JSON.stringify(levels),
+      };
+      console.log("SCL Cupones Request:", requestData);
+
       $.ajax({
         url: scl_ajax.ajax_url,
         type: "POST",
-        data: {
-          action: "scl_search_cupones",
-          nonce: scl_ajax.nonce,
-          search_term: searchTerm,
-          category_selected: categorySlug,
-          categoria_base: categoriaBase,
-          levels: JSON.stringify(levels),
-        },
+        data: requestData,
         success: function (response) {
+          console.log("SCL Cupones Debug:", response);
           if (response.success && response.data && response.data.html) {
             $grid.html(response.data.html);
             $noResults.hide();

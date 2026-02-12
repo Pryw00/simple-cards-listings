@@ -1202,73 +1202,29 @@ class SCL_Ajax_Handlers
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
         $categoria_base = isset($_POST['categoria_base']) ? sanitize_text_field($_POST['categoria_base']) : '';
 
-        // Si no hay búsqueda ni categoría del dropdown, usar query simplificada
-        if (empty($search_term) && empty($category_selected)) {
-            $simple_args = array(
-                'post_type' => 'promocion',
-                'post_status' => 'publish',
-                'posts_per_page' => -1,
-                'orderby' => 'date',
-                'order' => 'DESC',
-            );
-
-            // Si hay categoria_base, filtrar por ella
-            if (!empty($categoria_base)) {
-                $cat_base = get_term_by('slug', $categoria_base, 'categoria_promocion');
-                if ($cat_base) {
-                    $simple_args['tax_query'] = array(
-                        array(
-                            'taxonomy' => 'categoria_promocion',
-                            'field'    => 'term_id',
-                            'terms'    => $cat_base->term_id,
-                            'include_children' => true,
-                        ),
-                    );
-                }
+        // Parsear niveles
+        $levels_json = isset($_POST['levels']) ? sanitize_text_field($_POST['levels']) : '';
+        $levels = array();
+        if (!empty($levels_json) && $levels_json !== 'null' && $levels_json !== '""') {
+            $decoded = json_decode(stripslashes($levels_json), true);
+            if (is_array($decoded)) {
+                $levels = $decoded;
             }
-
-            $query = new WP_Query($simple_args);
-            $html = '';
-
-            // Parsear niveles si se proporcionaron
-            $levels_json = isset($_POST['levels']) ? sanitize_text_field($_POST['levels']) : '';
-            $levels = array();
-            if (!empty($levels_json) && $levels_json !== 'null' && $levels_json !== '""') {
-                $decoded = json_decode(stripslashes($levels_json), true);
-                if (is_array($decoded)) {
-                    $levels = $decoded;
-                }
-            }
-
-            if ($query->have_posts()) {
-                while ($query->have_posts()) {
-                    $query->the_post();
-                    $html .= SCL_Shortcodes::render_cupon_card(get_the_ID(), $levels);
-                }
-                wp_reset_postdata();
-            }
-
-            wp_send_json_success(array(
-                'html' => $html,
-                'found' => $query->found_posts,
-            ));
-            return;
         }
 
-        // Formato de datetime-local: YYYY-MM-DDTHH:MM
-        $ahora = current_time('Y-m-d\TH:i');
-
-        // Query base
+        // Query base - todas las promociones publicadas
         $args = array(
             'post_type' => 'promocion',
             'post_status' => 'publish',
             'posts_per_page' => -1,
+            'orderby' => 'date',
+            'order' => 'DESC',
         );
 
-        // Crear tax_query
+        // Aplicar filtro de taxonomía
         $tax_query = array();
 
-        // Si hay una categoría base (del shortcode), aplicar ese filtro
+        // Categoría base del shortcode
         if (!empty($categoria_base)) {
             $cat_base = get_term_by('slug', $categoria_base, 'categoria_promocion');
             if ($cat_base) {
@@ -1281,7 +1237,7 @@ class SCL_Ajax_Handlers
             }
         }
 
-        // Si hay una categoría seleccionada en el dropdown, agregarla al filtro
+        // Categoría seleccionada en dropdown
         if (!empty($category_selected)) {
             $tax_query[] = array(
                 'taxonomy' => 'categoria_promocion',
@@ -1290,7 +1246,6 @@ class SCL_Ajax_Handlers
             );
         }
 
-        // Aplicar tax_query si hay filtros
         if (!empty($tax_query)) {
             if (count($tax_query) > 1) {
                 $tax_query['relation'] = 'AND';
@@ -1298,65 +1253,16 @@ class SCL_Ajax_Handlers
             $args['tax_query'] = $tax_query;
         }
 
-        // Meta query con OR para manejar campos vacíos
-        $meta_query = array('relation' => 'AND');
-
-        // Filtrar que no haya expirado (fecha_fin >= ahora, o no existe, o está vacío)
-        $meta_query[] = array(
-            'relation' => 'OR',
-            array(
-                'key' => '_scl_fecha_fin',
-                'value' => $ahora,
-                'compare' => '>=',
-                'type' => 'CHAR',
-            ),
-            array(
-                'key' => '_scl_fecha_fin',
-                'compare' => 'NOT EXISTS',
-            ),
-            array(
-                'key' => '_scl_fecha_fin',
-                'value' => '',
-                'compare' => '=',
-            ),
-        );
-
-        // Filtrar que ya haya iniciado (fecha_inicio <= ahora, o no existe, o está vacío)
-        $meta_query[] = array(
-            'relation' => 'OR',
-            array(
-                'key' => '_scl_fecha_inicio',
-                'value' => $ahora,
-                'compare' => '<=',
-                'type' => 'CHAR',
-            ),
-            array(
-                'key' => '_scl_fecha_inicio',
-                'compare' => 'NOT EXISTS',
-            ),
-            array(
-                'key' => '_scl_fecha_inicio',
-                'value' => '',
-                'compare' => '=',
-            ),
-        );
-
-        $args['meta_query'] = $meta_query;
-
-        // Si hay búsqueda, buscar en título/contenido de promoción O en nombre del establecimiento
-        $promocion_ids = array();
-
+        // Si hay término de búsqueda, filtrar por texto
         if (!empty($search_term)) {
-            // Buscar promociones por título/contenido
-            $promo_args = $args;
-            $promo_args['s'] = $search_term;
-            $promo_args['fields'] = 'ids';
-            $promo_query = new WP_Query($promo_args);
-            if ($promo_query->have_posts()) {
-                $promocion_ids = array_merge($promocion_ids, $promo_query->posts);
-            }
+            // Obtener IDs de promociones que coinciden por título/contenido
+            $promo_search_args = $args;
+            $promo_search_args['s'] = $search_term;
+            $promo_search_args['fields'] = 'ids';
+            $promo_query = new WP_Query($promo_search_args);
+            $matching_ids = $promo_query->posts;
 
-            // Buscar establecimientos que coincidan con el término
+            // Buscar establecimientos que coincidan
             $est_query = new WP_Query(array(
                 'post_type' => 'establecimiento',
                 's' => $search_term,
@@ -1364,96 +1270,37 @@ class SCL_Ajax_Handlers
                 'fields' => 'ids',
             ));
 
-            // Si hay establecimientos que coinciden, buscar sus promociones
             if ($est_query->have_posts()) {
-                // Construir args frescos para promociones de establecimientos
-                $est_promo_args = array(
-                    'post_type' => 'promocion',
-                    'post_status' => 'publish',
-                    'posts_per_page' => -1,
-                    'fields' => 'ids',
-                    'meta_query' => array(
-                        'relation' => 'AND',
-                        array(
-                            'key' => '_scl_establecimiento_id',
-                            'value' => $est_query->posts,
-                            'compare' => 'IN',
-                        ),
-                        array(
-                            'relation' => 'OR',
-                            array(
-                                'key' => '_scl_fecha_fin',
-                                'value' => $ahora,
-                                'compare' => '>=',
-                                'type' => 'CHAR',
-                            ),
-                            array(
-                                'key' => '_scl_fecha_fin',
-                                'compare' => 'NOT EXISTS',
-                            ),
-                            array(
-                                'key' => '_scl_fecha_fin',
-                                'value' => '',
-                                'compare' => '=',
-                            ),
-                        ),
-                        array(
-                            'relation' => 'OR',
-                            array(
-                                'key' => '_scl_fecha_inicio',
-                                'value' => $ahora,
-                                'compare' => '<=',
-                                'type' => 'CHAR',
-                            ),
-                            array(
-                                'key' => '_scl_fecha_inicio',
-                                'compare' => 'NOT EXISTS',
-                            ),
-                            array(
-                                'key' => '_scl_fecha_inicio',
-                                'value' => '',
-                                'compare' => '=',
-                            ),
-                        ),
+                // Buscar promociones de esos establecimientos
+                $est_promo_args = $args;
+                unset($est_promo_args['s']);
+                $est_promo_args['fields'] = 'ids';
+                $est_promo_args['meta_query'] = array(
+                    array(
+                        'key' => '_scl_establecimiento_id',
+                        'value' => $est_query->posts,
+                        'compare' => 'IN',
                     ),
                 );
-
-                // Aplicar tax_query si existe en args original
-                if (!empty($args['tax_query'])) {
-                    $est_promo_args['tax_query'] = $args['tax_query'];
-                }
-
                 $est_promo_query = new WP_Query($est_promo_args);
-                if ($est_promo_query->have_posts()) {
-                    $promocion_ids = array_merge($promocion_ids, $est_promo_query->posts);
-                }
+                $matching_ids = array_merge($matching_ids, $est_promo_query->posts);
             }
 
-            // Eliminar duplicados y obtener promociones finales
-            $promocion_ids = array_unique($promocion_ids);
+            $matching_ids = array_unique($matching_ids);
 
-            if (!empty($promocion_ids)) {
-                // Consulta final solo con los IDs encontrados
-                $args['post__in'] = $promocion_ids;
-                unset($args['s']);
+            if (!empty($matching_ids)) {
+                $args['post__in'] = $matching_ids;
+                $args['orderby'] = 'post__in';
             } else {
-                // No se encontró nada, forzar resultado vacío
-                $args['post__in'] = array(0);
+                // No hay coincidencias
+                wp_send_json_success(array('html' => '', 'found' => 0));
+                return;
             }
         }
 
+        // Ejecutar query final
         $query = new WP_Query($args);
         $html = '';
-
-        // Parsear niveles si se proporcionaron
-        $levels_json = isset($_POST['levels']) ? sanitize_text_field($_POST['levels']) : '';
-        $levels = array();
-        if (!empty($levels_json)) {
-            $decoded = json_decode(stripslashes($levels_json), true);
-            if (is_array($decoded)) {
-                $levels = $decoded;
-            }
-        }
 
         if ($query->have_posts()) {
             while ($query->have_posts()) {
@@ -1466,6 +1313,13 @@ class SCL_Ajax_Handlers
         wp_send_json_success(array(
             'html' => $html,
             'found' => $query->found_posts,
+            'debug' => array(
+                'search_term' => $search_term,
+                'category_selected' => $category_selected,
+                'categoria_base' => $categoria_base,
+                'matching_ids' => isset($matching_ids) ? $matching_ids : 'N/A',
+                'final_args' => $args,
+            ),
         ));
     }
 
