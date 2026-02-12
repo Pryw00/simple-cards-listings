@@ -1303,14 +1303,53 @@ class SCL_Ajax_Handlers
 
             // Si hay establecimientos que coinciden, buscar sus promociones
             if ($est_query->have_posts()) {
-                $est_promo_args = $args;
-                unset($est_promo_args['s']); // No filtrar por texto aquí
-                $est_promo_args['meta_query'][] = array(
-                    'key' => '_scl_establecimiento_id',
-                    'value' => $est_query->posts,
-                    'compare' => 'IN',
+                // Construir args frescos para promociones de establecimientos
+                $est_promo_args = array(
+                    'post_type' => 'promocion',
+                    'post_status' => 'publish',
+                    'posts_per_page' => -1,
+                    'fields' => 'ids',
+                    'meta_query' => array(
+                        'relation' => 'AND',
+                        array(
+                            'key' => '_scl_establecimiento_id',
+                            'value' => $est_query->posts,
+                            'compare' => 'IN',
+                        ),
+                        array(
+                            'relation' => 'OR',
+                            array(
+                                'key' => '_scl_fecha_fin',
+                                'value' => $ahora,
+                                'compare' => '>=',
+                                'type' => 'CHAR',
+                            ),
+                            array(
+                                'key' => '_scl_fecha_fin',
+                                'compare' => 'NOT EXISTS',
+                            ),
+                        ),
+                        array(
+                            'relation' => 'OR',
+                            array(
+                                'key' => '_scl_fecha_inicio',
+                                'value' => $ahora,
+                                'compare' => '<=',
+                                'type' => 'CHAR',
+                            ),
+                            array(
+                                'key' => '_scl_fecha_inicio',
+                                'compare' => 'NOT EXISTS',
+                            ),
+                        ),
+                    ),
                 );
-                $est_promo_args['fields'] = 'ids';
+
+                // Aplicar tax_query si existe en args original
+                if (!empty($args['tax_query'])) {
+                    $est_promo_args['tax_query'] = $args['tax_query'];
+                }
+
                 $est_promo_query = new WP_Query($est_promo_args);
                 if ($est_promo_query->have_posts()) {
                     $promocion_ids = array_merge($promocion_ids, $est_promo_query->posts);
