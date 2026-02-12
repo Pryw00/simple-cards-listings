@@ -28,7 +28,7 @@
    Variables
    ========================================================================== */
 :root {
-  --scl-primary-color: #e91e8c;
+  --scl-primary-color: #ec62b7;
   --scl-primary-hover: #d11a7e;
   --scl-success-color: #10b981;
   --scl-warning-color: #f59e0b;
@@ -1333,6 +1333,80 @@ div#scl-edit-modal-body {
   transition: var(--scl-transition);
   position: relative;
   cursor: pointer;
+  clip-path: polygon(
+    94.45% 0%,
+    5.56% 0%,
+    5.56% 0%,
+    4.65% 0.09%,
+    3.8% 0.34%,
+    3% 0.75%,
+    2.28% 1.3%,
+    1.63% 1.96%,
+    1.07% 2.75%,
+    0.62% 3.63%,
+    0.28% 4.59%,
+    0.07% 5.63%,
+    0% 6.72%,
+    0% 93.28%,
+    0% 93.28%,
+    0.07% 94.37%,
+    0.28% 95.41%,
+    0.62% 96.37%,
+    1.07% 97.25%,
+    1.63% 98.03%,
+    2.28% 98.7%,
+    3% 99.25%,
+    3.8% 99.66%,
+    4.65% 99.91%,
+    5.56% 100%,
+    38.89% 100%,
+    38.89% 100%,
+    39.03% 98.77%,
+    39.47% 97.18%,
+    40.14% 96.54%,
+    41.04% 95.61%,
+    42.17% 94.78%,
+    43.45% 94.01%,
+    44.87% 93.32%,
+    46.41% 92.69%,
+    48.09% 92.14%,
+    49.89% 91.66%,
+    49.89% 91.66%,
+    51.7% 91.66%,
+    53.38% 92.14%,
+    54.92% 92.69%,
+    56.34% 93.32%,
+    57.62% 94.01%,
+    58.74% 94.78%,
+    59.64% 95.61%,
+    60.31% 96.54%,
+    60.75% 97.18%,
+    60.89% 98.77%,
+    94.45% 100%,
+    94.45% 100%,
+    95.49% 99.91%,
+    96.34% 99.66%,
+    97.14% 99.25%,
+    97.86% 98.7%,
+    98.51% 98.03%,
+    99.07% 97.25%,
+    99.52% 96.37%,
+    99.86% 95.41%,
+    100% 94.37%,
+    100% 93.28%,
+    100% 6.72%,
+    100% 6.72%,
+    100% 5.63%,
+    99.86% 4.59%,
+    99.52% 3.63%,
+    99.07% 2.75%,
+    98.51% 1.97%,
+    97.86% 1.3%,
+    97.14% 0.75%,
+    96.34% 0.34%,
+    95.49% 0.09%,
+    94.45% 0%
+  );
 }
 
 .scl-cupon-card:hover {
@@ -1359,13 +1433,15 @@ div#scl-edit-modal-body {
 
 .scl-cupon-info {
   padding: 20px;
+  margin-bottom: 15%;
 }
 
 .scl-cupon-establecimiento {
-  font-size: 13px;
-  color: var(--scl-text-light);
+  font-size: 15px;
+  color: #000000;
   margin-bottom: 8px;
-  font-weight: 500;
+  font-weight: 600;
+  text-align: center;
 }
 
 .scl-cupon-titulo {
@@ -1374,6 +1450,7 @@ div#scl-edit-modal-body {
   margin: 0 0 12px;
   color: var(--scl-text-color);
   line-height: 1.3;
+  text-align: center;
 }
 
 .scl-cupon-expira {
@@ -1384,19 +1461,20 @@ div#scl-edit-modal-body {
   display: flex;
   align-items: center;
   gap: 6px;
+  justify-content: center;
 }
 
 .scl-ver-cupon {
   width: 100%;
-  padding: 12px 24px;
-  background: var(--scl-primary-color);
-  color: var(--scl-white);
-  border: none;
-  border-radius: var(--scl-radius);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--scl-transition);
+  padding: 12px 24px !important;
+  background: var(--scl-primary-color) !important;
+  color: var(--scl-white) !important;
+  border: none !important;
+  border-radius: var(--scl-radius) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: var(--scl-transition) !important;
 }
 
 .scl-ver-cupon:hover {
