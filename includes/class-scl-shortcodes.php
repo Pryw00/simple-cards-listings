@@ -401,7 +401,7 @@ class SCL_Shortcodes
 
     /**
      * Shortcode: Grid con múltiples niveles de socios
-     * [scl_grid_gold categoria="" columns="3" per_page="12" level="{socio_gold, #ff6b35, 0};{socio_silver, #c0c0c0, 1};"]
+     * [scl_grid_gold categoria="" columns="3" per_page="12" level="{socio_gold, #ff6b35, 0};{socio_silver, #c0c0c0, 1};" only_link="true"]
      *
      * @param array $atts Atributos del shortcode.
      * @return string
@@ -416,6 +416,7 @@ class SCL_Shortcodes
             'pagination_type'    => 'default', // default, lazy, load_more
             'search_placeholder' => '', // Texto personalizado para el buscador
             'level'              => '', // Niveles: "{role, color, priority};..."
+            'only_link'          => 'false', // true: abre sitio web, false: abre modal
         ), $atts, 'scl_grid_gold');
 
         // Determinar posts_per_page basado en paginación
@@ -538,6 +539,7 @@ class SCL_Shortcodes
             data-categoria-filter="<?php echo esc_attr($categoria_filter); ?>"
             data-columns="<?php echo esc_attr($atts['columns']); ?>"
             data-is-gold="1"
+            data-only-link="<?php echo esc_attr($atts['only_link']); ?>"
             data-levels="<?php echo esc_attr(json_encode($levels)); ?>">
 
             <!-- Buscador -->
@@ -584,7 +586,7 @@ class SCL_Shortcodes
             <div class="scl-grid scl-grid-<?php echo esc_attr($atts['columns']); ?>" id="scl-grid">
                 <?php if (!empty($current_page_ids)) : ?>
                     <?php foreach ($current_page_ids as $post_id) : ?>
-                        <?php echo self::render_card_item($post_id, true, '', '', '', $levels); ?>
+                        <?php echo self::render_card_item($post_id, true, '', '', '', $levels, $atts['only_link']); ?>
                     <?php endforeach; ?>
                 <?php else : ?>
                     <p class="scl-no-results"><?php esc_html_e('No se encontraron establecimientos.', 'simple-cards-listings'); ?></p>
@@ -652,9 +654,10 @@ class SCL_Shortcodes
      * @param string $color_premium (Deprecated) Color hexadecimal para usuarios premium.
      * @param string $color_normal (Deprecated) Color hexadecimal para usuarios normales.
      * @param array $levels Array de niveles con roles, colores y prioridades.
+     * @param string $only_link Si es 'true', abre el sitio web en lugar del modal.
      * @return string
      */
-    public static function render_card_item($post_id, $check_gold = false, $role_slug = '', $color_premium = '', $color_normal = '', $levels = array())
+    public static function render_card_item($post_id, $check_gold = false, $role_slug = '', $color_premium = '', $color_normal = '', $levels = array(), $only_link = 'false')
     {
         $logo_id = SCL_Metaboxes::get_meta($post_id, 'logo');
         $logo_url = '';
@@ -712,13 +715,29 @@ class SCL_Shortcodes
             }
         }
 
+        // Obtener sitio web para only_link
+        $website_url = '';
+        if ($only_link === 'true') {
+            $website_url = SCL_Metaboxes::get_meta($post_id, 'website');
+        }
+
         ob_start();
     ?>
+        <?php if ($only_link === 'true' && !empty($website_url)) : ?>
+        <a href="<?php echo esc_url($website_url); ?>"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="<?php echo esc_attr($card_class); ?>"
+            <?php if (!empty($border_color)) : ?>
+            style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
+            <?php endif; ?>>
+        <?php else : ?>
         <div class="<?php echo esc_attr($card_class); ?>"
             data-id="<?php echo esc_attr($post_id); ?>"
             <?php if (!empty($border_color)) : ?>
             style="--badge-color: <?php echo esc_attr($border_color); ?>; --badge-shadow: <?php echo esc_attr($shadow_color); ?>;"
             <?php endif; ?>>
+        <?php endif; ?>
             <div class="scl-card-badge-outer">
                 <div class="scl-card-badge-inner">
                     <div class="scl-card-logo">
@@ -726,7 +745,11 @@ class SCL_Shortcodes
                     </div>
                 </div>
             </div>
+        <?php if ($only_link === 'true' && !empty($website_url)) : ?>
+        </a>
+        <?php else : ?>
         </div>
+        <?php endif; ?>
     <?php
         return ob_get_clean();
     }

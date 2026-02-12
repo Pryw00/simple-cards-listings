@@ -269,6 +269,7 @@ class SCL_Ajax_Handlers
         $categoria_filter = isset($_POST['categoria_filter']) ? sanitize_text_field($_POST['categoria_filter']) : '';
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
         $is_gold = isset($_POST['is_gold']) ? (bool) $_POST['is_gold'] : false;
+        $only_link = isset($_POST['only_link']) ? sanitize_text_field($_POST['only_link']) : 'false';
 
         // Parsear niveles
         $levels = array();
@@ -458,14 +459,14 @@ class SCL_Ajax_Handlers
                 // Generar HTML ordenado por prioridad
                 foreach ($posts_by_level as $level_posts) {
                     foreach ($level_posts as $post_id) {
-                        $html .= SCL_Shortcodes::render_card_item($post_id, true, '', '', '', $levels);
+                        $html .= SCL_Shortcodes::render_card_item($post_id, true, '', '', '', $levels, $only_link);
                     }
                 }
             } else {
                 // Grid normal
                 while ($query->have_posts()) {
                     $query->the_post();
-                    $html .= SCL_Shortcodes::render_card_item(get_the_ID(), false);
+                    $html .= SCL_Shortcodes::render_card_item(get_the_ID(), false, '', '', '', array(), $only_link);
                 }
                 wp_reset_postdata();
             }
@@ -941,6 +942,7 @@ class SCL_Ajax_Handlers
         $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
         $is_gold = isset($_POST['is_gold']) ? (bool) $_POST['is_gold'] : false;
+        $only_link = isset($_POST['only_link']) ? sanitize_text_field($_POST['only_link']) : 'false';
 
         // Parsear niveles
         $levels = array();
@@ -956,14 +958,21 @@ class SCL_Ajax_Handlers
             $per_page = 12;
         }
 
+        // Para grid gold, necesitamos obtener TODOS los posts primero para ordenar por nivel
+        $posts_per_page_query = ($is_gold && !empty($levels)) ? -1 : $per_page;
+
         $args = array(
             'post_type'      => 'establecimiento',
             'post_status'    => 'publish',
-            'posts_per_page' => $per_page,
+            'posts_per_page' => $posts_per_page_query,
             'orderby'        => 'title',
             'order'          => 'ASC',
-            'paged'          => $page,
         );
+
+        // Solo aplicar paginación si NO es grid gold
+        if (!($is_gold && !empty($levels))) {
+            $args['paged'] = $page;
+        }
 
         // Aplicar filtros de taxonomía
         $tax_query = array('relation' => 'AND');
@@ -1032,17 +1041,37 @@ class SCL_Ajax_Handlers
                 }
                 wp_reset_postdata();
 
-                // Generar HTML ordenado por prioridad
+                // Combinar posts ordenados por prioridad de nivel
+                $ordered_ids = array();
                 foreach ($posts_by_level as $level_posts) {
-                    foreach ($level_posts as $post_id) {
-                        $html .= SCL_Shortcodes::render_card_item($post_id, true, '', '', '', $levels);
-                    }
+                    $ordered_ids = array_merge($ordered_ids, $level_posts);
                 }
+
+                // Calcular offset y obtener solo los IDs de la página actual
+                $offset = ($page - 1) * $per_page;
+                $current_page_ids = array_slice($ordered_ids, $offset, $per_page);
+
+                // Calcular total de páginas
+                $total_posts = count($ordered_ids);
+                $max_pages = ceil($total_posts / $per_page);
+
+                // Generar HTML solo para los posts de la página actual
+                foreach ($current_page_ids as $post_id) {
+                    $html .= SCL_Shortcodes::render_card_item($post_id, true, '', '', '', $levels, $only_link);
+                }
+
+                // Enviar respuesta con paginación correcta
+                wp_send_json_success(array(
+                    'html' => $html,
+                    'has_more' => $page < $max_pages,
+                    'max_pages' => $max_pages,
+                ));
+                return;
             } else {
                 // Grid normal
                 while ($query->have_posts()) {
                     $query->the_post();
-                    $html .= SCL_Shortcodes::render_card_item(get_the_ID(), false);
+                    $html .= SCL_Shortcodes::render_card_item(get_the_ID(), false, '', '', '', array(), $only_link);
                 }
                 wp_reset_postdata();
             }

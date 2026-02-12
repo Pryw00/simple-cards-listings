@@ -364,6 +364,19 @@
   }
 }
 
+/* Estilos específicos para medallones como enlaces (only_link=true) */
+a.scl-card-badge {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  cursor: pointer;
+}
+
+a.scl-card-badge:focus {
+  outline: 2px solid var(--badge-color, #d4af37);
+  outline-offset: 4px;
+}
+
 /* Logo estándar (para grids no-gold) */
 .scl-card-logo {
   width: 100%;
