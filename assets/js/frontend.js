@@ -1062,7 +1062,6 @@
             $("#scl-promo-establecimiento").val(
               data.establecimiento ? data.establecimiento.id : "",
             );
-            $("#scl-promo-destacado").prop("checked", data.destacado);
 
             // Cargar fechas desde meta
             self.loadPromocionMeta(promocionId);

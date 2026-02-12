@@ -265,26 +265,88 @@
 /* Diseño de Medallón/Emblema para Grid Gold */
 .scl-card-badge {
   position: relative;
-  border-radius: 50%;
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   overflow: visible;
+  filter: drop-shadow(0 4px 10px var(--badge-shadow, rgba(212, 175, 55, 0.3)));
+  transition: filter 0.3s ease;
 }
 
-/* Anillo exterior del medallón */
+.scl-card-badge:hover {
+  filter: drop-shadow(0 8px 20px var(--badge-shadow, rgba(212, 175, 55, 0.5)));
+}
+
+/* Forma de sello/estrella exterior del medallón */
 .scl-card-badge-outer {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  padding: 10px;
+  padding: 15%;
   background: var(--badge-color, #d4af37);
-  box-shadow:
-    0 4px 15px var(--badge-shadow, rgba(212, 175, 55, 0.3)),
-    inset 0 2px 8px rgba(255, 255, 255, 0.2),
-    inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+  clip-path: polygon(
+    100% 50%,
+    95.6% 54.8%,
+    98.9% 60.4%,
+    93.7% 64.2%,
+    95.7% 70.4%,
+    89.8% 73%,
+    90.4% 79.5%,
+    84.1% 80.8%,
+    83.5% 87.3%,
+    77% 87.3%,
+    75% 93.5%,
+    68.7% 92.1%,
+    65.5% 97.8%,
+    59.5% 95.1%,
+    55.2% 100%,
+    50% 96.1%,
+    44.8% 100%,
+    40.5% 95.1%,
+    34.5% 97.8%,
+    31.3% 92.1%,
+    25% 93.5%,
+    23% 87.3%,
+    16.6% 87.3%,
+    15.9% 80.8%,
+    9.5% 79.5%,
+    10.3% 73%,
+    4.3% 70.4%,
+    6.4% 64.2%,
+    1.1% 60.4%,
+    4.4% 54.8%,
+    0% 50%,
+    4.4% 45.2%,
+    1.1% 39.5%,
+    6.4% 35.7%,
+    4.3% 29.5%,
+    10.3% 26.9%,
+    9.5% 20.4%,
+    15.9% 19.1%,
+    16.6% 12.6%,
+    23% 12.6%,
+    25% 6.4%,
+    31.3% 7.8%,
+    34.5% 2.2%,
+    40.5% 4.9%,
+    44.8% 0%,
+    50% 3.9%,
+    55.2% 0%,
+    59.5% 4.9%,
+    65.5% 2.2%,
+    68.7% 7.8%,
+    75% 6.4%,
+    77% 12.6%,
+    83.5% 12.6%,
+    84.1% 19.1%,
+    90.4% 20.4%,
+    89.8% 26.9%,
+    95.7% 29.5%,
+    93.7% 35.7%,
+    98.9% 39.5%,
+    95.6% 45.2%
+  );
   transition: all 0.3s ease;
   position: relative;
   display: flex;
@@ -312,10 +374,6 @@
 /* Efecto hover para el medallón */
 .scl-card-badge:hover .scl-card-badge-outer {
   transform: scale(1.05) rotate(5deg);
-  box-shadow:
-    0 8px 25px var(--badge-shadow, rgba(212, 175, 55, 0.5)),
-    inset 0 2px 10px rgba(255, 255, 255, 0.3),
-    inset 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .scl-card-badge:hover .scl-card-badge-inner {
@@ -1280,24 +1338,6 @@ div#scl-edit-modal-body {
 .scl-cupon-card:hover {
   box-shadow: var(--scl-shadow-lg);
   transform: translateY(-4px);
-}
-
-.scl-cupon-card[data-destacado="1"] {
-  border: 2px solid var(--scl-warning-color);
-}
-
-.scl-cupon-badge-destacado {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: var(--scl-warning-color);
-  color: var(--scl-white);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .scl-cupon-imagen {

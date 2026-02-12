@@ -129,9 +129,6 @@
     // Imagen
     html += '<div class="scl-cupon-modal-imagen">';
     html += '<img src="' + cupon.imagen + '" alt="' + cupon.titulo + '">';
-    if (cupon.destacado) {
-      html += '<div class="scl-cupon-badge-destacado">⭐ Destacado</div>';
-    }
     html += "</div>";
 
     // Información

@@ -83,7 +83,6 @@ class SCL_Ajax_Handlers
             'fecha_inicio' => get_post_meta($promocion_id, '_scl_fecha_inicio', true),
             'fecha_fin' => get_post_meta($promocion_id, '_scl_fecha_fin', true),
             'establecimiento_id' => get_post_meta($promocion_id, '_scl_establecimiento_id', true),
-            'destacado' => get_post_meta($promocion_id, '_scl_destacado', true),
         );
 
         wp_send_json_success($data);
@@ -1185,7 +1184,6 @@ class SCL_Ajax_Handlers
             'imagen' => $imagen_url,
             'fecha_inicio' => $fecha_inicio ? date_i18n(get_option('date_format'), strtotime($fecha_inicio)) : '',
             'fecha_fin' => $fecha_fin ? date_i18n(get_option('date_format'), strtotime($fecha_fin)) : '',
-            'destacado' => get_post_meta($post_id, '_scl_destacado', true) == '1',
             'establecimiento' => $establecimiento,
             'share_url' => $share_url,
         );
@@ -1302,7 +1300,6 @@ class SCL_Ajax_Handlers
         $descripcion = isset($_POST['descripcion']) ? wp_kses_post($_POST['descripcion']) : '';
         $fecha_inicio = isset($_POST['fecha_inicio']) ? sanitize_text_field($_POST['fecha_inicio']) : '';
         $fecha_fin = isset($_POST['fecha_fin']) ? sanitize_text_field($_POST['fecha_fin']) : '';
-        $destacado = isset($_POST['destacado']) ? '1' : '0';
 
         // Validar establecimiento
         if (!$establecimiento_id || get_post_type($establecimiento_id) !== 'establecimiento') {
@@ -1360,7 +1357,6 @@ class SCL_Ajax_Handlers
         update_post_meta($cupon_id, '_scl_establecimiento_id', $establecimiento_id);
         update_post_meta($cupon_id, '_scl_fecha_inicio', $fecha_inicio);
         update_post_meta($cupon_id, '_scl_fecha_fin', $fecha_fin);
-        update_post_meta($cupon_id, '_scl_destacado', $destacado);
 
         // Manejar imagen si se subió
         if (!empty($_FILES['imagen']['name'])) {

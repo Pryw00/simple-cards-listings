@@ -139,7 +139,6 @@ class SCL_Cupones
         $establecimiento_id = get_post_meta($post->ID, '_scl_establecimiento_id', true);
         $fecha_inicio = get_post_meta($post->ID, '_scl_fecha_inicio', true);
         $fecha_fin = get_post_meta($post->ID, '_scl_fecha_fin', true);
-        $destacado = get_post_meta($post->ID, '_scl_destacado', true);
 
         // Obtener establecimientos del usuario o todos si es admin
         if (current_user_can('administrator')) {
@@ -191,14 +190,6 @@ class SCL_Cupones
             </label>
             <input type="datetime-local" name="scl_fecha_fin" id="scl_fecha_fin" value="<?php echo esc_attr($fecha_fin); ?>" required style="width: 100%;">
             <p class="description"><?php esc_html_e('Fecha y hora de expiración del cupón.', 'simple-cards-listings'); ?></p>
-        </div>
-
-        <div class="scl-metabox-field">
-            <label>
-                <input type="checkbox" name="scl_destacado" id="scl_destacado" value="1" <?php checked($destacado, '1'); ?>>
-                <?php esc_html_e('Cupón Destacado', 'simple-cards-listings'); ?>
-            </label>
-            <p class="description"><?php esc_html_e('Los cupones destacados aparecen primero en el grid.', 'simple-cards-listings'); ?></p>
         </div>
 
         <style>
@@ -256,10 +247,6 @@ class SCL_Cupones
         if (isset($_POST['scl_fecha_fin'])) {
             update_post_meta($post_id, '_scl_fecha_fin', sanitize_text_field($_POST['scl_fecha_fin']));
         }
-
-        // Guardar destacado
-        $destacado = isset($_POST['scl_destacado']) ? '1' : '0';
-        update_post_meta($post_id, '_scl_destacado', $destacado);
     }
 
     /**
@@ -272,7 +259,6 @@ class SCL_Cupones
         $new_columns['title'] = __('Nombre del Cupón', 'simple-cards-listings');
         $new_columns['establecimiento'] = __('Establecimiento', 'simple-cards-listings');
         $new_columns['vigencia'] = __('Vigencia', 'simple-cards-listings');
-        $new_columns['destacado'] = __('Destacado', 'simple-cards-listings');
         $new_columns['thumbnail'] = __('Imagen', 'simple-cards-listings');
         $new_columns['date'] = $columns['date'];
 
@@ -319,11 +305,6 @@ class SCL_Cupones
                 } else {
                     echo '—';
                 }
-                break;
-
-            case 'destacado':
-                $destacado = get_post_meta($post_id, '_scl_destacado', true);
-                echo $destacado == '1' ? '⭐' : '—';
                 break;
 
             case 'thumbnail':

@@ -28,7 +28,6 @@ Plugin de directorio de cartas de contacto de negocios para WordPress, desarroll
   - Establecimiento asociado
   - Fecha de inicio y fin de validez
   - Imagen promocional
-  - Marcador de destacado
 - **Sistema de logs**: Registro de todas las acciones importantes
 - **Panel de configuración**: Opciones personalizables
 
@@ -194,7 +193,7 @@ El plugin dispara varios hooks para personalización:
 
 - **Sistema de Cupones Promocionales completo**:
   - CPT "Cupón" con taxonomía de categorías
-  - Metaboxes para establecimiento, fechas, destacado
+  - Metaboxes para establecimiento, fechas
   - Sistema de permisos (usuarios solo gestionan cupones de sus establecimientos)
   - Validación de fechas (inicio/fin de validez)
   - Shortcode `[scl_cupones]` con grid responsive

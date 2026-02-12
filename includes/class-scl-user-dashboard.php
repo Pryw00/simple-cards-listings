@@ -215,7 +215,6 @@ class SCL_User_Dashboard
                     'establecimiento' => $establecimiento ? $establecimiento->post_title : '',
                     'fecha_inicio' => $fecha_inicio ? date_i18n(get_option('date_format'), strtotime($fecha_inicio)) : '',
                     'fecha_fin' => $fecha_fin ? date_i18n(get_option('date_format'), strtotime($fecha_fin)) : '',
-                    'destacado' => get_post_meta($cupon_id, '_scl_destacado', true) == '1',
                     'imagen_url' => get_the_post_thumbnail_url($cupon_id, 'thumbnail'),
                     'estado' => $estado,
                     'can_edit' => current_user_can('edit_post', $cupon_id),

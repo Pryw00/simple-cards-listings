@@ -72,7 +72,6 @@ class SCL_Shortcodes
 
         $fecha_inicio = get_post_meta($cupon_id, '_scl_fecha_inicio', true);
         $fecha_fin = get_post_meta($cupon_id, '_scl_fecha_fin', true);
-        $destacado = get_post_meta($cupon_id, '_scl_destacado', true) == '1';
 
 ?>
         <!-- Modal de promoción compartida -->
@@ -90,9 +89,6 @@ class SCL_Shortcodes
                         <!-- Imagen -->
                         <div class="scl-cupon-modal-imagen">
                             <img src="<?php echo esc_url($imagen_url); ?>" alt="<?php echo esc_attr($cupon->post_title); ?>">
-                            <?php if ($destacado) : ?>
-                                <div class="scl-cupon-badge-destacado">⭐ <?php esc_html_e('Destacado', 'simple-cards-listings'); ?></div>
-                            <?php endif; ?>
                         </div>
 
                         <!-- Información -->
@@ -1327,13 +1323,6 @@ class SCL_Shortcodes
                             </div>
 
                             <div class="scl-form-row">
-                                <label class="scl-checkbox-label">
-                                    <input type="checkbox" id="scl-promo-destacado" name="destacado" value="1">
-                                    <?php esc_html_e('Marcar como promoción destacada', 'simple-cards-listings'); ?>
-                                </label>
-                            </div>
-
-                            <div class="scl-form-row">
                                 <button type="submit" class="scl-btn scl-btn-primary" id="scl-promo-submit">
                                     <?php esc_html_e('Guardar Promoción', 'simple-cards-listings'); ?>
                                 </button>
@@ -1503,7 +1492,6 @@ class SCL_Shortcodes
         }
 
         $fecha_fin = get_post_meta($post_id, '_scl_fecha_fin', true);
-        $destacado = get_post_meta($post_id, '_scl_destacado', true);
 
         $dias_restantes = '';
         if ($fecha_fin) {
@@ -1523,10 +1511,7 @@ class SCL_Shortcodes
 
         ob_start();
     ?>
-        <div class="scl-cupon-card" data-id="<?php echo esc_attr($post_id); ?>" <?php echo $destacado == '1' ? 'data-destacado="1"' : ''; ?>>
-            <?php if ($destacado == '1') : ?>
-                <div class="scl-cupon-badge-destacado">⭐ <?php esc_html_e('Destacado', 'simple-cards-listings'); ?></div>
-            <?php endif; ?>
+        <div class="scl-cupon-card" data-id="<?php echo esc_attr($post_id); ?>">
 
             <div class="scl-cupon-imagen">
                 <img src="<?php echo esc_url($imagen_url); ?>" alt="<?php echo esc_attr(get_the_title($post_id)); ?>">
