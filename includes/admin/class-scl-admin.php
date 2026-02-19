@@ -47,6 +47,41 @@ class SCL_Admin
         add_filter('manage_establecimiento_posts_columns', array($this, 'add_custom_columns'));
         add_action('manage_establecimiento_posts_custom_column', array($this, 'render_custom_columns'), 10, 2);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+        add_action('pre_get_posts', array($this, 'modify_admin_queries'));
+    }
+
+    /**
+     * Modificar consultas del admin para roles gestores
+     * Los roles gestores configurados pueden ver todos los posts
+     */
+    public function modify_admin_queries($query)
+    {
+        // Solo en admin y en la consulta principal
+        if (!is_admin() || !$query->is_main_query()) {
+            return;
+        }
+
+        // Solo para nuestros custom post types
+        $post_type = $query->get('post_type');
+        if ($post_type !== 'establecimiento' && $post_type !== 'promocion') {
+            return;
+        }
+
+        // Si es administrador, no necesita cambios
+        if (current_user_can('manage_options')) {
+            return;
+        }
+
+        // Verificar si el usuario actual tiene rol gestor
+        $current_user_id = get_current_user_id();
+        if (!$current_user_id) {
+            return;
+        }
+
+        if (SCL_Permissions::is_manager_role($current_user_id)) {
+            // Los gestores pueden ver todos los posts
+            $query->set('author', '');
+        }
     }
 
     /**
@@ -54,22 +89,22 @@ class SCL_Admin
      */
     public function add_admin_menu()
     {
-        // Submenú bajo Establecimientos
+        // Submenú bajo Establecimientos - usar capacidad personalizada
         add_submenu_page(
             'edit.php?post_type=establecimiento',
             __('Configuración', 'simple-cards-listings'),
             __('Configuración', 'simple-cards-listings'),
-            'manage_options',
+            SCL_Permissions::can_manage_settings() ? 'read' : 'manage_options',
             'scl-settings',
             array($this, 'render_settings_page')
         );
 
-        // Submenú para logs
+        // Submenú para logs - usar capacidad personalizada
         add_submenu_page(
             'edit.php?post_type=establecimiento',
             __('Registro de Actividad', 'simple-cards-listings'),
             __('Logs', 'simple-cards-listings'),
-            'manage_options',
+            SCL_Permissions::can_view_logs() ? 'read' : 'manage_options',
             'scl-logs',
             array($this, 'render_logs_page')
         );
@@ -140,6 +175,32 @@ class SCL_Admin
             'scl_general_section'
         );
 
+        // Sección de roles y permisos
+        add_settings_section(
+            'scl_roles_section',
+            __('Configuración de Roles y Permisos', 'simple-cards-listings'),
+            array($this, 'render_roles_section'),
+            'scl_settings'
+        );
+
+        // Campo: roles con permisos completos
+        add_settings_field(
+            'scl_manager_roles',
+            __('Roles gestores (permisos completos)', 'simple-cards-listings'),
+            array($this, 'render_manager_roles_field'),
+            'scl_settings',
+            'scl_roles_section'
+        );
+
+        // Campo: roles que reciben notificaciones
+        add_settings_field(
+            'scl_notification_roles',
+            __('Roles que reciben notificaciones', 'simple-cards-listings'),
+            array($this, 'render_notification_roles_field'),
+            'scl_settings',
+            'scl_roles_section'
+        );
+
         // Sección de personalización de modales
         add_settings_section(
             'scl_modal_section',
@@ -187,7 +248,16 @@ class SCL_Admin
         $sanitized = array();
 
         if (isset($input['notification_email'])) {
-            $sanitized['notification_email'] = sanitize_email($input['notification_email']);
+            // Permitir múltiples emails separados por comas
+            $emails = explode(',', $input['notification_email']);
+            $valid_emails = array();
+            foreach ($emails as $email) {
+                $email = trim($email);
+                if (is_email($email)) {
+                    $valid_emails[] = sanitize_email($email);
+                }
+            }
+            $sanitized['notification_email'] = implode(', ', $valid_emails);
         }
 
         if (isset($input['grid_columns'])) {
@@ -202,6 +272,24 @@ class SCL_Admin
             if ($sanitized['logs_retention'] < 7) {
                 $sanitized['logs_retention'] = 90;
             }
+        }
+
+        // Sanitizar roles gestores
+        if (isset($input['manager_roles']) && is_array($input['manager_roles'])) {
+            $wp_roles = wp_roles();
+            $all_roles = array_keys($wp_roles->get_names());
+            $sanitized['manager_roles'] = array_intersect($input['manager_roles'], $all_roles);
+        } else {
+            $sanitized['manager_roles'] = array();
+        }
+
+        // Sanitizar roles de notificación
+        if (isset($input['notification_roles']) && is_array($input['notification_roles'])) {
+            $wp_roles = wp_roles();
+            $all_roles = array_keys($wp_roles->get_names());
+            $sanitized['notification_roles'] = array_intersect($input['notification_roles'], $all_roles);
+        } else {
+            $sanitized['notification_roles'] = array();
         }
 
         // Sanitizar opciones de fondo del modal
@@ -243,8 +331,10 @@ class SCL_Admin
         $options = get_option('scl_options', array());
         $value = isset($options['notification_email']) ? $options['notification_email'] : get_option('admin_email');
 ?>
-        <input type="email" name="scl_options[notification_email]" value="<?php echo esc_attr($value); ?>" class="regular-text">
-        <p class="description"><?php esc_html_e('Email donde se enviarán las notificaciones de nuevas solicitudes.', 'simple-cards-listings'); ?></p>
+        <input type="text" name="scl_options[notification_email]" value="<?php echo esc_attr($value); ?>" class="regular-text">
+        <p class="description">
+            <?php esc_html_e('Emails donde se enviarán las notificaciones (separados por coma). También se enviarán automáticamente a todos los usuarios con los roles configurados en la sección "Roles y Permisos".', 'simple-cards-listings'); ?>
+        </p>
     <?php
     }
 
@@ -277,6 +367,78 @@ class SCL_Admin
     ?>
         <input type="number" name="scl_options[logs_retention]" value="<?php echo esc_attr($value); ?>" min="7" max="365" class="small-text">
         <p class="description"><?php esc_html_e('Número de días para mantener los registros de actividad.', 'simple-cards-listings'); ?></p>
+    <?php
+    }
+
+    /**
+     * Renderizar sección de roles
+     */
+    public function render_roles_section()
+    {
+        echo '<p>' . esc_html__('Configura qué roles de usuario tienen permisos especiales y reciben notificaciones.', 'simple-cards-listings') . '</p>';
+    }
+
+    /**
+     * Renderizar campo de roles gestores
+     */
+    public function render_manager_roles_field()
+    {
+        $options = get_option('scl_options', array());
+        $selected_roles = isset($options['manager_roles']) ? (array) $options['manager_roles'] : array('author');
+
+        // Obtener todos los roles de WordPress
+        $wp_roles = wp_roles();
+        $all_roles = $wp_roles->get_names();
+
+        // Excluir administrator ya que siempre tiene acceso
+        unset($all_roles['administrator']);
+    ?>
+        <fieldset>
+            <?php foreach ($all_roles as $role_slug => $role_name) : ?>
+                <label style="display: block; margin-bottom: 8px;">
+                    <input type="checkbox"
+                        name="scl_options[manager_roles][]"
+                        value="<?php echo esc_attr($role_slug); ?>"
+                        <?php checked(in_array($role_slug, $selected_roles)); ?>>
+                    <?php echo esc_html($role_name); ?>
+                </label>
+            <?php endforeach; ?>
+        </fieldset>
+        <p class="description">
+            <?php esc_html_e('Los usuarios con estos roles podrán gestionar TODOS los establecimientos y promociones, sin restricciones. Los administradores siempre tienen acceso completo.', 'simple-cards-listings'); ?>
+        </p>
+    <?php
+    }
+
+    /**
+     * Renderizar campo de roles de notificación
+     */
+    public function render_notification_roles_field()
+    {
+        $options = get_option('scl_options', array());
+        $selected_roles = isset($options['notification_roles']) ? (array) $options['notification_roles'] : array('author');
+
+        // Obtener todos los roles de WordPress
+        $wp_roles = wp_roles();
+        $all_roles = $wp_roles->get_names();
+
+        // Excluir subscriber ya que normalmente no debería recibir notificaciones admin
+        unset($all_roles['subscriber']);
+    ?>
+        <fieldset>
+            <?php foreach ($all_roles as $role_slug => $role_name) : ?>
+                <label style="display: block; margin-bottom: 8px;">
+                    <input type="checkbox"
+                        name="scl_options[notification_roles][]"
+                        value="<?php echo esc_attr($role_slug); ?>"
+                        <?php checked(in_array($role_slug, $selected_roles)); ?>>
+                    <?php echo esc_html($role_name); ?>
+                </label>
+            <?php endforeach; ?>
+        </fieldset>
+        <p class="description">
+            <?php esc_html_e('Los usuarios con estos roles recibirán notificaciones por email cuando se creen nuevos establecimientos o promociones. Las notificaciones también se enviarán a los emails configurados arriba.', 'simple-cards-listings'); ?>
+        </p>
     <?php
     }
 
@@ -411,8 +573,8 @@ class SCL_Admin
      */
     public function render_settings_page()
     {
-        if (! current_user_can('manage_options')) {
-            return;
+        if (! SCL_Permissions::can_manage_settings()) {
+            wp_die(__('No tienes permisos para acceder a esta página.', 'simple-cards-listings'));
         }
     ?>
         <div class="wrap">
@@ -468,8 +630,8 @@ class SCL_Admin
      */
     public function render_logs_page()
     {
-        if (! current_user_can('manage_options')) {
-            return;
+        if (! SCL_Permissions::can_view_logs()) {
+            wp_die(__('No tienes permisos para acceder a esta página.', 'simple-cards-listings'));
         }
 
         $page = isset($_GET['paged']) ? absint($_GET['paged']) : 1;

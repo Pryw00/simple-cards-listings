@@ -4,7 +4,7 @@
  * Plugin Name: Simple Cards Listings
  * Plugin URI: https://example.com/simple-cards-listings
  * Description: Plugin de directorio de cartas de contacto de negocios para WordPress, conforme a la especificación IEEE 830-1998.
- * Version: 1.2.2
+ * Version: 1.2.3
  * Author: Pryw00
  * Author URI: https://example.com
  * Text Domain: simple-cards-listings
@@ -23,7 +23,7 @@ if (! defined('ABSPATH')) {
 }
 
 // Definir constantes del plugin
-define('SCL_VERSION', '1.2.2');
+define('SCL_VERSION', '1.2.3');
 define('SCL_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('SCL_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('SCL_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -125,6 +125,36 @@ final class Simple_Cards_Listings
 
         // User Dashboard
         SCL_User_Dashboard::init();
+
+        // Agregar capacidades dinámicas a roles gestores
+        add_filter('user_has_cap', array($this, 'add_manager_capabilities'), 10, 4);
+    }
+
+    /**
+     * Agregar capacidades dinámicas a roles gestores
+     * Esto permite que los roles configurados como gestores puedan editar/eliminar posts de otros
+     */
+    public function add_manager_capabilities($allcaps, $caps, $args, $user)
+    {
+        // Solo aplicar si el usuario tiene un rol gestor
+        if (!SCL_Permissions::is_manager_role($user->ID)) {
+            return $allcaps;
+        }
+
+        // Dar capacidades de edición de otros para establecimientos y promociones
+        $manager_caps = array(
+            'edit_others_posts',
+            'edit_published_posts',
+            'delete_others_posts',
+            'delete_published_posts',
+            'publish_posts',
+        );
+
+        foreach ($manager_caps as $cap) {
+            $allcaps[$cap] = true;
+        }
+
+        return $allcaps;
     }
 
     /**

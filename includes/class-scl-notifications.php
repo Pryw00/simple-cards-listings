@@ -15,7 +15,143 @@ if (! defined('ABSPATH')) {
  * Clase para gestionar notificaciones del plugin
  */
 class SCL_Notifications
+// Asegurar funciones globales de WordPress disponibles
+// No es necesario 'use' en PHP, pero aclarar para contexto
 {
+    /**
+     * Obtener todos los emails que deben recibir notificaciones
+     * Incluye: admin emails configurados + todos los usuarios con roles de notificación configurados
+     * 
+     * @return array Array de emails
+     */
+    private static function get_notification_emails()
+    {
+        $emails = array();
+
+        // Obtener emails del administrador configurados
+        $admin_email_raw = get_option('admin_email');
+        $admin_emails = array_map('trim', explode(',', $admin_email_raw));
+        $emails = array_merge($emails, $admin_emails);
+
+        // Obtener roles configurados para recibir notificaciones
+        $options = get_option('scl_options', array());
+        $notification_roles = isset($options['notification_roles']) ? (array) $options['notification_roles'] : array('author');
+
+        // Obtener usuarios con cualquiera de los roles de notificación
+        foreach ($notification_roles as $role) {
+            $users = get_users(array(
+                'role' => $role,
+                'fields' => array('user_email'),
+            ));
+
+            foreach ($users as $user) {
+                if (!empty($user->user_email)) {
+                    $emails[] = $user->user_email;
+                }
+            }
+        }
+
+        // Eliminar duplicados y emails vacíos
+        $emails = array_unique(array_filter($emails));
+
+        return $emails;
+    }
+
+    public static function notify_new_promotion($post_id)
+    {
+        $post = get_post($post_id);
+        if (! $post || $post->post_type !== 'promocion') {
+            return;
+        }
+
+        // Obtener todos los emails (admin + autores)
+        $notification_emails = self::get_notification_emails();
+
+        $site_name = get_bloginfo('name');
+        $author = get_userdata($post->post_author);
+        $author_name = $author ? $author->display_name : __('Usuario desconocido', 'simple-cards-listings');
+        $author_email = $author ? $author->user_email : '';
+
+        $subject = sprintf(
+            /* translators: 1: nombre del sitio, 2: nombre de la promoción */
+            __('[%1$s] Nueva promoción creada: %2$s', 'simple-cards-listings'),
+            $site_name,
+            $post->post_title
+        );
+
+        $message = sprintf(
+            /* translators: 1: nombre de la promoción */
+            __('Se ha creado una nueva promoción.', 'simple-cards-listings')
+        ) . "\n\n";
+        $message .= sprintf(
+            __('Nombre: %s', 'simple-cards-listings'),
+            $post->post_title
+        ) . "\n";
+        $message .= sprintf(
+            __('Creado por: %s', 'simple-cards-listings'),
+            $author_name
+        ) . "\n";
+        if ($author_email) {
+            $message .= sprintf(
+                __('Email del creador: %s', 'simple-cards-listings'),
+                $author_email
+            ) . "\n";
+        }
+        $message .= sprintf(
+            __('Fecha: %s', 'simple-cards-listings'),
+            get_the_date('', $post_id)
+        ) . "\n\n";
+        $establecimiento_id = get_post_meta($post_id, '_scl_establecimiento_id', true);
+        if ($establecimiento_id) {
+            $establecimiento = get_post($establecimiento_id);
+            if ($establecimiento) {
+                $message .= sprintf(
+                    __('Establecimiento: %s', 'simple-cards-listings'),
+                    $establecimiento->post_title
+                ) . "\n";
+            }
+        }
+        $message .= "\n" . __('Para revisar esta promoción, visita:', 'simple-cards-listings') . "\n";
+        $message .= admin_url('post.php?post=' . $post_id . '&action=edit') . "\n\n";
+        $message .= "---\n";
+        $message .= sprintf(
+            __('Este correo fue enviado automáticamente desde %s', 'simple-cards-listings'),
+            $site_name
+        );
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        if ($author_email) {
+            $headers[] = 'Reply-To: ' . $author_name . ' <' . $author_email . '>';
+        }
+        $all_sent = true;
+        foreach ($notification_emails as $email) {
+            $sent = wp_mail($email, $subject, $message, $headers);
+            if ($sent) {
+                SCL_Logger::log(
+                    'notification_sent',
+                    sprintf(
+                        __('Notificación enviada a %1$s sobre nueva promoción: "%2$s"', 'simple-cards-listings'),
+                        $email,
+                        $post->post_title
+                    ),
+                    $post_id,
+                    'notification'
+                );
+            } else {
+                SCL_Logger::log(
+                    'notification_failed',
+                    sprintf(
+                        __('Error al enviar notificación a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                        $email,
+                        $post->post_title
+                    ),
+                    $post_id,
+                    'notification'
+                );
+                $all_sent = false;
+            }
+        }
+        return $all_sent;
+    }
 
     /**
      * Notificar al administrador sobre nueva solicitud
@@ -30,7 +166,9 @@ class SCL_Notifications
             return;
         }
 
-        $admin_email = get_option('admin_email');
+        // Obtener todos los emails (admin + autores)
+        $notification_emails = self::get_notification_emails();
+
         $site_name   = get_bloginfo('name');
         $author      = get_userdata($post->post_author);
         $author_name = $author ? $author->display_name : __('Usuario desconocido', 'simple-cards-listings');
@@ -124,37 +262,39 @@ class SCL_Notifications
             $headers[] = 'Reply-To: ' . $author_name . ' <' . $author_email . '>';
         }
 
-        // Enviar correo
-        $sent = wp_mail($admin_email, $subject, $message, $headers);
-
-        // Log del envío
-        if ($sent) {
-            SCL_Logger::log(
-                'notification_sent',
-                sprintf(
-                    /* translators: 1: email, 2: título del establecimiento */
-                    __('Notificación enviada a %1$s sobre nueva solicitud: "%2$s"', 'simple-cards-listings'),
-                    $admin_email,
-                    $post->post_title
-                ),
-                $post_id,
-                'notification'
-            );
-        } else {
-            SCL_Logger::log(
-                'notification_failed',
-                sprintf(
-                    /* translators: 1: email, 2: título del establecimiento */
-                    __('Error al enviar notificación a %1$s sobre: "%2$s"', 'simple-cards-listings'),
-                    $admin_email,
-                    $post->post_title
-                ),
-                $post_id,
-                'notification'
-            );
+        // Enviar correo a todos los emails
+        $all_sent = true;
+        foreach ($notification_emails as $email) {
+            $sent = wp_mail($email, $subject, $message, $headers);
+            // Log del envío
+            if ($sent) {
+                SCL_Logger::log(
+                    'notification_sent',
+                    sprintf(
+                        /* translators: 1: email, 2: título del establecimiento */
+                        __('Notificación enviada a %1$s sobre nueva solicitud: "%2$s"', 'simple-cards-listings'),
+                        $email,
+                        $post->post_title
+                    ),
+                    $post_id,
+                    'notification'
+                );
+            } else {
+                SCL_Logger::log(
+                    'notification_failed',
+                    sprintf(
+                        /* translators: 1: email, 2: título del establecimiento */
+                        __('Error al enviar notificación a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                        $email,
+                        $post->post_title
+                    ),
+                    $post_id,
+                    'notification'
+                );
+                $all_sent = false;
+            }
         }
-
-        return $sent;
+        return $all_sent;
     }
 
     /**

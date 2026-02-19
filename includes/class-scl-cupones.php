@@ -140,8 +140,8 @@ class SCL_Cupones
         $fecha_inicio = get_post_meta($post->ID, '_scl_fecha_inicio', true);
         $fecha_fin = get_post_meta($post->ID, '_scl_fecha_fin', true);
 
-        // Obtener establecimientos del usuario o todos si es admin
-        if (current_user_can('administrator')) {
+        // Obtener establecimientos del usuario o todos si tiene permisos
+        if (SCL_Permissions::can_edit_promocion(0) || user_can(get_current_user_id(), 'edit_others_promociones')) {
             $establecimientos = get_posts(array(
                 'post_type'      => 'establecimiento',
                 'post_status'    => 'publish',
@@ -229,8 +229,8 @@ class SCL_Cupones
             return;
         }
 
-        // Verificar permisos
-        if (!current_user_can('edit_post', $post_id)) {
+        // Verificar permisos usando el sistema de capacidades
+        if (!SCL_Permissions::can_edit_promocion($post_id)) {
             return;
         }
 
@@ -246,6 +246,14 @@ class SCL_Cupones
 
         if (isset($_POST['scl_fecha_fin'])) {
             update_post_meta($post_id, '_scl_fecha_fin', sanitize_text_field($_POST['scl_fecha_fin']));
+        }
+
+        // Notificar al administrador cuando se crea una nueva promoción
+        // Solo si es creación (no actualización)
+        if ($post instanceof WP_Post && $post->post_type === 'promocion' && $post->post_status === 'publish' && $post->post_date === $post->post_modified) {
+            if (method_exists('SCL_Notifications', 'notify_new_promotion')) {
+                SCL_Notifications::notify_new_promotion($post_id);
+            }
         }
     }
 
@@ -337,26 +345,37 @@ class SCL_Cupones
             return $caps;
         }
 
-        // Administradores pueden todo
-        if (user_can($user_id, 'administrator')) {
-            return $caps;
-        }
+        // Usar el sistema de permisos integrado
+        if ($cap === 'edit_post') {
+            if (SCL_Permissions::can_edit_promocion($post->ID, $user_id)) {
+                return array('read');
+            }
+        } elseif ($cap === 'delete_post') {
+            if (SCL_Permissions::can_delete_promocion($post->ID, $user_id)) {
+                return array('read');
+            }
+        } elseif ($cap === 'read_post') {
+            // El autor puede leer sus propias promociones
+            if ((int) $post->post_author === (int) $user_id) {
+                return array('read');
+            }
 
-        // Verificar que el establecimiento de la promoción pertenezca al usuario
-        $establecimiento_id = get_post_meta($post->ID, '_scl_establecimiento_id', true);
-        if ($establecimiento_id) {
-            $establecimiento = get_post($establecimiento_id);
-            if ($establecimiento && (int) $establecimiento->post_author === (int) $user_id) {
-                return $caps;
+            // Verificar permiso usando el sistema de integración con ARM
+            $can_read_others = apply_filters('scl_check_permission', false, 'edit_others_promociones', $user_id);
+
+            // Si no usa ARM, verificar capacidad nativa
+            if (!$can_read_others && user_can($user_id, 'edit_others_promociones')) {
+                $can_read_others = true;
+            }
+
+            // Usuarios con permiso para editar de otros pueden leer
+            if ($can_read_others) {
+                return array('read');
             }
         }
 
-        // Si la promoción es suya
-        if ((int) $post->post_author === (int) $user_id) {
-            return $caps;
-        }
-
-        return array('do_not_allow');
+        // Retornar las capacidades originales en lugar de bloquear completamente
+        return $caps;
     }
 
     /**
@@ -368,8 +387,8 @@ class SCL_Cupones
             $user_id = get_current_user_id();
         }
 
-        // Administradores siempre pueden
-        if (user_can($user_id, 'administrator')) {
+        // Usar el sistema de permisos integrado
+        if (user_can($user_id, 'manage_options') || user_can($user_id, 'edit_others_promociones')) {
             return true;
         }
 

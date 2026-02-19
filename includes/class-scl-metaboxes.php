@@ -124,8 +124,8 @@ class SCL_Metaboxes
 
         echo '<div class="scl-metabox-wrapper">';
 
-        // Campo de propietario (solo para administradores)
-        if (current_user_can('administrator')) {
+        // Campo de propietario (solo para usuarios con permisos de edición avanzados)
+        if (SCL_Permissions::can_approve() || user_can(get_current_user_id(), 'edit_others_establecimientos')) {
             echo '<div class="scl-field-row">';
             echo '<label for="scl_propietario" class="scl-field-label">' . esc_html__('Propietario', 'simple-cards-listings') . '</label>';
             echo '<div class="scl-field-input">';

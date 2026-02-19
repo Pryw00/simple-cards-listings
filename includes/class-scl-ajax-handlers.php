@@ -521,12 +521,16 @@ class SCL_Ajax_Handlers
             wp_send_json_error(array('message' => __('Debes subir un logo.', 'simple-cards-listings')));
         }
 
-        // Crear post como borrador pendiente
+        // Crear post como borrador pendiente (salvo admins y autores)
+        // Verificar si el usuario es administrador o autor para auto-aprobar
+        $current_user = wp_get_current_user();
+        $auto_approve = current_user_can('manage_options') || SCL_Permissions::is_manager_role($current_user->ID);
+
         $post_data = array(
             'post_title'   => sanitize_text_field($_POST['nombre']),
             'post_content' => wp_kses_post($_POST['descripcion']),
             'post_type'    => 'establecimiento',
-            'post_status'  => 'pending',
+            'post_status'  => $auto_approve ? 'publish' : 'pending',
             'post_author'  => get_current_user_id(),
         );
 
@@ -621,12 +625,19 @@ class SCL_Ajax_Handlers
             'establecimiento'
         );
 
-        // Enviar notificación al admin
-        SCL_Notifications::notify_new_submission($post_id);
+        // Enviar notificación al admin (solo si está pendiente)
+        if (get_post_status($post_id) === 'pending') {
+            SCL_Notifications::notify_new_submission($post_id);
+        }
+
+        $message = $auto_approve
+            ? __('Establecimiento creado y publicado exitosamente.', 'simple-cards-listings')
+            : __('Tu solicitud ha sido enviada y está pendiente de aprobación.', 'simple-cards-listings');
 
         wp_send_json_success(array(
-            'message' => __('Tu solicitud ha sido enviada y está pendiente de aprobación.', 'simple-cards-listings'),
+            'message' => $message,
             'post_id' => $post_id,
+            'status' => get_post_status($post_id),
         ));
     }
 
@@ -1347,8 +1358,8 @@ class SCL_Ajax_Handlers
             wp_send_json_error(array('message' => __('Establecimiento no válido.', 'simple-cards-listings')));
         }
 
-        // Verificar permisos
-        if (!current_user_can('edit_post', $establecimiento_id)) {
+        // Verificar permisos usando el sistema personalizado
+        if (!SCL_Permissions::can_edit($establecimiento_id)) {
             wp_send_json_error(array('message' => __('No tienes permisos para este establecimiento.', 'simple-cards-listings')));
         }
 
@@ -1366,7 +1377,7 @@ class SCL_Ajax_Handlers
 
         // Si es edición, validar permisos
         if ($cupon_id) {
-            if (!current_user_can('edit_post', $cupon_id)) {
+            if (!SCL_Permissions::can_edit_promocion($cupon_id)) {
                 wp_send_json_error(array('message' => __('No puedes editar esta promoción.', 'simple-cards-listings')));
             }
 
@@ -1379,11 +1390,15 @@ class SCL_Ajax_Handlers
             wp_update_post($post_data);
         } else {
             // Crear nueva promoción
+            // Verificar si el usuario es administrador o autor para auto-aprobar
+            $current_user = wp_get_current_user();
+            $auto_approve = current_user_can('manage_options') || SCL_Permissions::is_manager_role($current_user->ID);
+
             $post_data = array(
                 'post_type' => 'promocion',
                 'post_title' => $titulo,
                 'post_content' => $descripcion,
-                'post_status' => 'publish', // O 'pending' si requiere aprobación
+                'post_status' => $auto_approve ? 'publish' : 'pending',
                 'post_author' => get_current_user_id(),
             );
 
@@ -1411,9 +1426,21 @@ class SCL_Ajax_Handlers
             }
         }
 
+        // Enviar notificación al admin (solo si es nueva y está pendiente o si se auto-aprobó)
+        $is_new = !isset($_POST['cupon_id']) || intval($_POST['cupon_id']) === 0;
+        if ($is_new) {
+            SCL_Notifications::notify_new_promotion($cupon_id);
+        }
+
+        $current_status = get_post_status($cupon_id);
+        $message = ($current_status === 'publish')
+            ? __('Promoción guardada exitosamente.', 'simple-cards-listings')
+            : __('Promoción enviada y está pendiente de aprobación.', 'simple-cards-listings');
+
         wp_send_json_success(array(
-            'message' => __('Cupón guardado exitosamente.', 'simple-cards-listings'),
+            'message' => $message,
             'cupon_id' => $cupon_id,
+            'status' => $current_status,
         ));
     }
 
@@ -1434,7 +1461,7 @@ class SCL_Ajax_Handlers
             wp_send_json_error(array('message' => __('Promoción no encontrada.', 'simple-cards-listings')));
         }
 
-        if (!current_user_can('delete_post', $cupon_id)) {
+        if (!SCL_Permissions::can_delete_promocion($cupon_id)) {
             wp_send_json_error(array('message' => __('No tienes permisos para eliminar esta promoción.', 'simple-cards-listings')));
         }
 
