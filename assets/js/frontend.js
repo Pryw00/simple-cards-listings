@@ -277,20 +277,29 @@
       const categoriaBase = $container.data("categoria-base") || "";
       const levels = $container.data("levels") || "";
 
+      // Limpiar espacios extra del término de búsqueda
+      const cleanSearchTerm = (searchTerm || "").trim();
+      const cleanCategorySlug = (categorySlug || "").trim();
+
+      // Cancelar petición anterior si existe
+      if (this.cuponesAjaxRequest) {
+        this.cuponesAjaxRequest.abort();
+      }
+
       $grid.html('<div class="scl-loading"></div>');
       $noResults.hide();
 
       const requestData = {
         action: "scl_search_cupones",
         nonce: scl_ajax.nonce,
-        search_term: searchTerm,
-        category_selected: categorySlug,
+        search_term: cleanSearchTerm,
+        category_selected: cleanCategorySlug,
         categoria_base: categoriaBase,
         levels: JSON.stringify(levels),
       };
       console.log("SCL Cupones Request:", requestData);
 
-      $.ajax({
+      this.cuponesAjaxRequest = $.ajax({
         url: scl_ajax.ajax_url,
         type: "POST",
         data: requestData,
@@ -304,7 +313,11 @@
             $noResults.show();
           }
         },
-        error: function () {
+        error: function (xhr, status) {
+          // No mostrar error si fue cancelado intencionalmente
+          if (status === "abort") {
+            return;
+          }
           $grid.html(
             '<p class="scl-message scl-message-error">' +
               (scl_ajax.i18n ? scl_ajax.i18n.error : "Error") +

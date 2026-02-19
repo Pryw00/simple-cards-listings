@@ -1198,7 +1198,8 @@ class SCL_Ajax_Handlers
     {
         check_ajax_referer('scl_nonce', 'nonce');
 
-        $search_term = isset($_POST['search_term']) ? sanitize_text_field($_POST['search_term']) : '';
+        // Limpiar y normalizar el término de búsqueda (trim espacios, convertir a minúsculas)
+        $search_term = isset($_POST['search_term']) ? trim(sanitize_text_field($_POST['search_term'])) : '';
         $category_selected = isset($_POST['category_selected']) ? sanitize_text_field($_POST['category_selected']) : '';
         $categoria_base = isset($_POST['categoria_base']) ? sanitize_text_field($_POST['categoria_base']) : '';
 
