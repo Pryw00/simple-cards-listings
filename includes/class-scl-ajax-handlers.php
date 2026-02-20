@@ -1501,7 +1501,7 @@ class SCL_Ajax_Handlers
             );
 
             wp_update_post($post_data);
-            
+
             // Log de la edición
             SCL_Logger::log(
                 'promocion_edited',
@@ -1509,10 +1509,10 @@ class SCL_Ajax_Handlers
                 $cupon_id,
                 'promocion'
             );
-            
+
             // Notificar al admin sobre la edición
             SCL_Notifications::notify_new_promotion($cupon_id);
-            
+
             // Notificar al usuario que su edición está en revisión
             SCL_Notifications::notify_user_promotion_submission_received($cupon_id);
         } else {
