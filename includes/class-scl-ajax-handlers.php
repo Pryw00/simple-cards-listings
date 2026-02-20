@@ -487,6 +487,53 @@ class SCL_Ajax_Handlers
     }
 
     /**
+     * Validar imagen (peso y dimensiones)
+     * 
+     * @param array $file Archivo de $_FILES
+     * @param string $field_name Nombre del campo para mensajes de error
+     * @return bool|string true si es válida, mensaje de error si no
+     */
+    private static function validate_image($file, $field_name = 'imagen')
+    {
+        // Validar peso máximo: 1MB
+        $max_size = 1048576; // 1MB en bytes
+        if ($file['size'] > $max_size) {
+            return sprintf(
+                /* translators: 1: nombre del campo, 2: tamaño máximo */
+                __('El %1$s no puede pesar más de %2$s.', 'simple-cards-listings'),
+                $field_name,
+                '1MB'
+            );
+        }
+
+        // Validar dimensiones máximas: 2000px
+        $max_dimension = 2000;
+        $image_info = getimagesize($file['tmp_name']);
+
+        if ($image_info === false) {
+            return sprintf(
+                /* translators: %s: nombre del campo */
+                __('El archivo %s no es una imagen válida.', 'simple-cards-listings'),
+                $field_name
+            );
+        }
+
+        list($width, $height) = $image_info;
+
+        if ($width > $max_dimension || $height > $max_dimension) {
+            return sprintf(
+                /* translators: 1: nombre del campo, 2: dimensión actual, 3: dimensión máxima */
+                __('El %1$s tiene dimensiones de %2$s. Las dimensiones máximas permitidas son %3$s en cualquier lado.', 'simple-cards-listings'),
+                $field_name,
+                $width . 'x' . $height . 'px',
+                $max_dimension . 'px'
+            );
+        }
+
+        return true;
+    }
+
+    /**
      * Procesar solicitud de nuevo establecimiento
      */
     public static function submit_solicitud()
@@ -519,6 +566,20 @@ class SCL_Ajax_Handlers
         // Validar y subir logo
         if (empty($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
             wp_send_json_error(array('message' => __('Debes subir un logo.', 'simple-cards-listings')));
+        }
+
+        // Validar tamaño y dimensiones del logo
+        $logo_validation = self::validate_image($_FILES['logo'], 'logo');
+        if ($logo_validation !== true) {
+            wp_send_json_error(array('message' => $logo_validation));
+        }
+
+        // Validar tamaño y dimensiones de la imagen del establecimiento (si existe)
+        if (!empty($_FILES['imagen_establecimiento']) && $_FILES['imagen_establecimiento']['error'] === UPLOAD_ERR_OK) {
+            $imagen_validation = self::validate_image($_FILES['imagen_establecimiento'], 'imagen del establecimiento');
+            if ($imagen_validation !== true) {
+                wp_send_json_error(array('message' => $imagen_validation));
+            }
         }
 
         // Crear post como borrador pendiente (salvo admins y autores)
@@ -625,9 +686,31 @@ class SCL_Ajax_Handlers
             'establecimiento'
         );
 
-        // Enviar notificación al admin (solo si está pendiente)
-        if (get_post_status($post_id) === 'pending') {
+        // Enviar notificaciones según el estado
+        $post_status = get_post_status($post_id);
+
+        // Log del estado del post para debugging
+        SCL_Logger::log(
+            'establecimiento_status',
+            sprintf(
+                'Estado del establecimiento "%s" (ID: %d): %s. Auto-approve: %s',
+                sanitize_text_field($_POST['nombre']),
+                $post_id,
+                $post_status,
+                $auto_approve ? 'Sí' : 'No'
+            ),
+            $post_id,
+            'establecimiento'
+        );
+
+        if ($post_status === 'pending') {
+            // Notificar a administradores y roles configurados
             SCL_Notifications::notify_new_submission($post_id);
+            // Notificar al usuario que envió la solicitud (en revisión)
+            SCL_Notifications::notify_user_submission_received($post_id);
+        } elseif ($post_status === 'publish') {
+            // Si fue auto-aprobado, notificar al usuario que su establecimiento fue publicado
+            SCL_Notifications::notify_user_establishment_published($post_id);
         }
 
         $message = $auto_approve
@@ -908,6 +991,22 @@ class SCL_Ajax_Handlers
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
+
+        // Validar logo si se está subiendo
+        if (!empty($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+            $logo_validation = self::validate_image($_FILES['logo'], 'logo');
+            if ($logo_validation !== true) {
+                wp_send_json_error(array('message' => $logo_validation));
+            }
+        }
+
+        // Validar imagen del establecimiento si se está subiendo
+        if (!empty($_FILES['imagen_establecimiento']) && $_FILES['imagen_establecimiento']['error'] === UPLOAD_ERR_OK) {
+            $imagen_validation = self::validate_image($_FILES['imagen_establecimiento'], 'imagen del establecimiento');
+            if ($imagen_validation !== true) {
+                wp_send_json_error(array('message' => $imagen_validation));
+            }
+        }
 
         // Logo
         if (! empty($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
@@ -1375,6 +1474,14 @@ class SCL_Ajax_Handlers
             wp_send_json_error(array('message' => __('La fecha de fin debe ser posterior a la de inicio.', 'simple-cards-listings')));
         }
 
+        // Validar imagen ANTES de crear/actualizar el post
+        if (!empty($_FILES['imagen']['name']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
+            $imagen_validation = self::validate_image($_FILES['imagen'], 'imagen de la promoción');
+            if ($imagen_validation !== true) {
+                wp_send_json_error(array('message' => $imagen_validation));
+            }
+        }
+
         // Si es edición, validar permisos
         if ($cupon_id) {
             if (!SCL_Permissions::can_edit_promocion($cupon_id)) {
@@ -1414,8 +1521,8 @@ class SCL_Ajax_Handlers
         update_post_meta($cupon_id, '_scl_fecha_inicio', $fecha_inicio);
         update_post_meta($cupon_id, '_scl_fecha_fin', $fecha_fin);
 
-        // Manejar imagen si se subió
-        if (!empty($_FILES['imagen']['name'])) {
+        // Manejar imagen si se subió (ya fue validada arriba)
+        if (!empty($_FILES['imagen']['name']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
             require_once ABSPATH . 'wp-admin/includes/media.php';
             require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -1430,6 +1537,30 @@ class SCL_Ajax_Handlers
         $is_new = !isset($_POST['cupon_id']) || intval($_POST['cupon_id']) === 0;
         if ($is_new) {
             SCL_Notifications::notify_new_promotion($cupon_id);
+
+            // Notificar al usuario según el estado
+            $current_status = get_post_status($cupon_id);
+
+            // Log del estado de la promoción para debugging
+            SCL_Logger::log(
+                'promocion_status',
+                sprintf(
+                    'Promoción %d creada con estado: %s (auto_approve: %s)',
+                    $cupon_id,
+                    $current_status,
+                    $auto_approve ? 'true' : 'false'
+                ),
+                $cupon_id,
+                'promocion'
+            );
+
+            if ($current_status === 'pending') {
+                // Si está pendiente, notificar que está en revisión
+                SCL_Notifications::notify_user_promotion_submission_received($cupon_id);
+            } elseif ($current_status === 'publish') {
+                // Si fue auto-aprobada, notificar que fue publicada
+                SCL_Notifications::notify_user_promotion_published($cupon_id);
+            }
         }
 
         $current_status = get_post_status($cupon_id);

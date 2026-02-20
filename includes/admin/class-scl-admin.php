@@ -175,6 +175,24 @@ class SCL_Admin
             'scl_general_section'
         );
 
+        // Campo: URL del directorio
+        add_settings_field(
+            'scl_directory_url',
+            __('URL del directorio de establecimientos', 'simple-cards-listings'),
+            array($this, 'render_directory_url_field'),
+            'scl_settings',
+            'scl_general_section'
+        );
+
+        // Campo: URL de promociones
+        add_settings_field(
+            'scl_promotions_url',
+            __('URL de la página de promociones', 'simple-cards-listings'),
+            array($this, 'render_promotions_url_field'),
+            'scl_settings',
+            'scl_general_section'
+        );
+
         // Sección de roles y permisos
         add_settings_section(
             'scl_roles_section',
@@ -274,6 +292,14 @@ class SCL_Admin
             }
         }
 
+        if (isset($input['directory_url'])) {
+            $sanitized['directory_url'] = esc_url_raw($input['directory_url']);
+        }
+
+        if (isset($input['promotions_url'])) {
+            $sanitized['promotions_url'] = esc_url_raw($input['promotions_url']);
+        }
+
         // Sanitizar roles gestores
         if (isset($input['manager_roles']) && is_array($input['manager_roles'])) {
             $wp_roles = wp_roles();
@@ -333,7 +359,7 @@ class SCL_Admin
 ?>
         <input type="text" name="scl_options[notification_email]" value="<?php echo esc_attr($value); ?>" class="regular-text">
         <p class="description">
-            <?php esc_html_e('Emails donde se enviarán las notificaciones (separados por coma). También se enviarán automáticamente a todos los usuarios con los roles configurados en la sección "Roles y Permisos".', 'simple-cards-listings'); ?>
+            <?php esc_html_e('Emails donde se enviarán las notificaciones (separados por punto y coma ";" ). También se enviarán automáticamente a todos los usuarios con los roles configurados en la sección "Roles y Permisos".', 'simple-cards-listings'); ?>
         </p>
     <?php
     }
@@ -367,6 +393,36 @@ class SCL_Admin
     ?>
         <input type="number" name="scl_options[logs_retention]" value="<?php echo esc_attr($value); ?>" min="7" max="365" class="small-text">
         <p class="description"><?php esc_html_e('Número de días para mantener los registros de actividad.', 'simple-cards-listings'); ?></p>
+    <?php
+    }
+
+    /**
+     * Renderizar campo de URL del directorio
+     */
+    public function render_directory_url_field()
+    {
+        $options = get_option('scl_options', array());
+        $value = isset($options['directory_url']) ? $options['directory_url'] : '';
+    ?>
+        <input type="url" name="scl_options[directory_url]" value="<?php echo esc_attr($value); ?>" class="regular-text" placeholder="https://ejemplo.com/directorio">
+        <p class="description">
+            <?php esc_html_e('URL base del directorio de establecimientos. Si se configura, se usará en los enlaces de las notificaciones en lugar del permalink individual de cada establecimiento. Deja vacío para usar el permalink por defecto.', 'simple-cards-listings'); ?>
+        </p>
+    <?php
+    }
+
+    /**
+     * Renderizar campo de URL de promociones
+     */
+    public function render_promotions_url_field()
+    {
+        $options = get_option('scl_options', array());
+        $value = isset($options['promotions_url']) ? $options['promotions_url'] : '';
+    ?>
+        <input type="url" name="scl_options[promotions_url]" value="<?php echo esc_attr($value); ?>" class="regular-text" placeholder="https://ejemplo.com/promociones">
+        <p class="description">
+            <?php esc_html_e('URL de la página de promociones. Si se configura, se usará en los enlaces de las notificaciones de promoción en lugar del permalink individual. Deja vacío para usar el permalink por defecto.', 'simple-cards-listings'); ?>
+        </p>
     <?php
     }
 

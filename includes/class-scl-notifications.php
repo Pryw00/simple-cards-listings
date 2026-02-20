@@ -29,8 +29,9 @@ class SCL_Notifications
         $emails = array();
 
         // Obtener emails del administrador configurados
-        $admin_email_raw = get_option('admin_email');
-        $admin_emails = array_map('trim', explode(',', $admin_email_raw));
+        $options = get_option('scl_options', array());
+        $admin_email_raw = isset($options['notification_email']) ? $options['notification_email'] : get_option('admin_email');
+        $admin_emails = array_map('trim', explode(';', $admin_email_raw));
         $emails = array_merge($emails, $admin_emails);
 
         // Obtener roles configurados para recibir notificaciones
@@ -350,7 +351,7 @@ class SCL_Notifications
             ) . "\n\n";
 
             $message .= __('Tu establecimiento ya es visible en el directorio.', 'simple-cards-listings') . "\n";
-            $message .= get_permalink($post_id) . "\n\n";
+            $message .= self::get_establishment_url($post_id) . "\n\n";
         } else {
             $subject = sprintf(
                 /* translators: 1: nombre del sitio, 2: nombre del establecimiento */
@@ -387,11 +388,499 @@ class SCL_Notifications
 
         wp_mail($author->user_email, $subject, $message, $headers);
     }
+
+    /**
+     * Notificar al usuario que envió la solicitud que está en revisión
+     *
+     * @param int $post_id ID del establecimiento.
+     */
+    public static function notify_user_submission_received($post_id)
+    {
+        $post = get_post($post_id);
+
+        if (! $post || 'establecimiento' !== $post->post_type) {
+            SCL_Logger::log(
+                'notification_skipped',
+                sprintf('No se pudo enviar notificación de recepción: Post inválido (ID: %d)', $post_id),
+                $post_id,
+                'notification'
+            );
+            return false;
+        }
+
+        $author = get_userdata($post->post_author);
+
+        if (! $author || empty($author->user_email)) {
+            SCL_Logger::log(
+                'notification_skipped',
+                sprintf('No se pudo enviar notificación de recepción: Autor sin email (Post ID: %d)', $post_id),
+                $post_id,
+                'notification'
+            );
+            return false;
+        }
+
+        $site_name = get_bloginfo('name');
+
+        // Asunto del correo
+        $subject = sprintf(
+            /* translators: 1: nombre del sitio, 2: nombre del establecimiento */
+            __('[%1$s] Hemos recibido tu solicitud: %2$s', 'simple-cards-listings'),
+            $site_name,
+            $post->post_title
+        );
+
+        // Cuerpo del correo
+        $message = sprintf(
+            /* translators: %s: nombre del usuario */
+            __('Hola %s,', 'simple-cards-listings'),
+            $author->display_name
+        ) . "\n\n";
+
+        $message .= sprintf(
+            /* translators: %s: nombre del establecimiento */
+            __('Gracias por enviar tu solicitud de registro para el establecimiento "%s".', 'simple-cards-listings'),
+            $post->post_title
+        ) . "\n\n";
+
+        $message .= __('Tu solicitud está actualmente en revisión por nuestro equipo.', 'simple-cards-listings') . "\n";
+        $message .= __('Te notificaremos por correo electrónico una vez que tu establecimiento haya sido revisado y aprobado.', 'simple-cards-listings') . "\n\n";
+
+        $message .= __('Este proceso puede tomar algunos días. Apreciamos tu paciencia.', 'simple-cards-listings') . "\n\n";
+
+        $message .= "---\n";
+        $message .= sprintf(
+            /* translators: %s: nombre del sitio */
+            __('Este correo fue enviado automáticamente desde %s', 'simple-cards-listings'),
+            $site_name
+        );
+
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8',
+        );
+
+        // Log antes de intentar enviar
+        SCL_Logger::log(
+            'notification_attempting',
+            sprintf(
+                'Intentando enviar notificación de recepción a %s sobre: "%s"',
+                $author->user_email,
+                $post->post_title
+            ),
+            $post_id,
+            'notification'
+        );
+
+        $sent = wp_mail($author->user_email, $subject, $message, $headers);
+
+        // Log del envío
+        if ($sent) {
+            SCL_Logger::log(
+                'notification_sent',
+                sprintf(
+                    /* translators: 1: email, 2: título del establecimiento */
+                    __('Notificación de recepción enviada a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                    $author->user_email,
+                    $post->post_title
+                ),
+                $post_id,
+                'notification'
+            );
+        } else {
+            SCL_Logger::log(
+                'notification_failed',
+                sprintf(
+                    /* translators: 1: email, 2: título del establecimiento */
+                    __('Error al enviar notificación de recepción a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                    $author->user_email,
+                    $post->post_title
+                ),
+                $post_id,
+                'notification'
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * Notificar al usuario que su establecimiento fue publicado directamente
+     *
+     * @param int $post_id ID del establecimiento.
+     */
+    public static function notify_user_establishment_published($post_id)
+    {
+        $post = get_post($post_id);
+
+        if (! $post || 'establecimiento' !== $post->post_type) {
+            return;
+        }
+
+        $author = get_userdata($post->post_author);
+
+        if (! $author) {
+            return;
+        }
+
+        $site_name = get_bloginfo('name');
+
+        // Asunto del correo
+        $subject = sprintf(
+            /* translators: 1: nombre del sitio, 2: nombre del establecimiento */
+            __('[%1$s] Tu establecimiento ha sido publicado: %2$s', 'simple-cards-listings'),
+            $site_name,
+            $post->post_title
+        );
+
+        // Cuerpo del correo
+        $message = sprintf(
+            /* translators: %s: nombre del usuario */
+            __('Hola %s,', 'simple-cards-listings'),
+            $author->display_name
+        ) . "\n\n";
+
+        $message .= sprintf(
+            /* translators: %s: nombre del establecimiento */
+            __('Tu establecimiento "%s" ha sido creado y publicado exitosamente.', 'simple-cards-listings'),
+            $post->post_title
+        ) . "\n\n";
+
+        $message .= __('Tu establecimiento ya es visible en el directorio.', 'simple-cards-listings') . "\n";
+        $message .= self::get_establishment_url($post_id) . "\n\n";
+
+        $message .= "---\n";
+        $message .= sprintf(
+            /* translators: %s: nombre del sitio */
+            __('Este correo fue enviado automáticamente desde %s', 'simple-cards-listings'),
+            $site_name
+        );
+
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8',
+        );
+
+        $sent = wp_mail($author->user_email, $subject, $message, $headers);
+
+        // Log del envío
+        if ($sent) {
+            SCL_Logger::log(
+                'notification_sent',
+                sprintf(
+                    /* translators: 1: email, 2: título del establecimiento */
+                    __('Notificación de publicación enviada a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                    $author->user_email,
+                    $post->post_title
+                ),
+                $post_id,
+                'notification'
+            );
+        } else {
+            SCL_Logger::log(
+                'notification_failed',
+                sprintf(
+                    /* translators: 1: email, 2: título del establecimiento */
+                    __('Error al enviar notificación de publicación a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                    $author->user_email,
+                    $post->post_title
+                ),
+                $post_id,
+                'notification'
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * Notificar al usuario que envió la promoción que está en revisión
+     *
+     * @param int $post_id ID de la promoción.
+     */
+    public static function notify_user_promotion_submission_received($post_id)
+    {
+        $post = get_post($post_id);
+
+        if (! $post || 'promocion' !== $post->post_type) {
+            SCL_Logger::log(
+                'notification_skipped',
+                sprintf('No se pudo enviar notificación de recepción de promoción: Post inválido (ID: %d)', $post_id),
+                $post_id,
+                'notification'
+            );
+            return false;
+        }
+
+        $author = get_userdata($post->post_author);
+
+        if (! $author || empty($author->user_email)) {
+            SCL_Logger::log(
+                'notification_skipped',
+                sprintf('No se pudo enviar notificación de recepción de promoción: Autor sin email (Post ID: %d)', $post_id),
+                $post_id,
+                'notification'
+            );
+            return false;
+        }
+
+        $site_name = get_bloginfo('name');
+
+        // Obtener el establecimiento asociado
+        $establecimiento_id = get_post_meta($post_id, '_scl_establecimiento_id', true);
+        $establecimiento_nombre = '';
+        if ($establecimiento_id) {
+            $establecimiento = get_post($establecimiento_id);
+            if ($establecimiento) {
+                $establecimiento_nombre = $establecimiento->post_title;
+            }
+        }
+
+        // Asunto del correo
+        $subject = sprintf(
+            /* translators: 1: nombre del sitio, 2: nombre de la promoción */
+            __('[%1$s] Hemos recibido tu promoción: %2$s', 'simple-cards-listings'),
+            $site_name,
+            $post->post_title
+        );
+
+        // Cuerpo del correo
+        $message = sprintf(
+            /* translators: %s: nombre del usuario */
+            __('Hola %s,', 'simple-cards-listings'),
+            $author->display_name
+        ) . "\n\n";
+
+        $message .= sprintf(
+            /* translators: %s: nombre de la promoción */
+            __('Gracias por enviar tu promoción "%s".', 'simple-cards-listings'),
+            $post->post_title
+        ) . "\n\n";
+
+        if ($establecimiento_nombre) {
+            $message .= sprintf(
+                /* translators: %s: nombre del establecimiento */
+                __('Establecimiento: %s', 'simple-cards-listings'),
+                $establecimiento_nombre
+            ) . "\n\n";
+        }
+
+        $message .= __('Tu promoción está actualmente en revisión por nuestro equipo.', 'simple-cards-listings') . "\n";
+        $message .= __('Te notificaremos por correo electrónico una vez que tu promoción haya sido revisada y aprobada.', 'simple-cards-listings') . "\n\n";
+
+        $message .= __('Este proceso puede tomar algunos días. Apreciamos tu paciencia.', 'simple-cards-listings') . "\n\n";
+
+        $message .= "---\n";
+        $message .= sprintf(
+            /* translators: %s: nombre del sitio */
+            __('Este correo fue enviado automáticamente desde %s', 'simple-cards-listings'),
+            $site_name
+        );
+
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8',
+        );
+
+        // Log antes de intentar enviar
+        SCL_Logger::log(
+            'notification_attempting',
+            sprintf(
+                'Intentando enviar notificación de recepción de promoción a %s sobre: "%s"',
+                $author->user_email,
+                $post->post_title
+            ),
+            $post_id,
+            'notification'
+        );
+
+        $sent = wp_mail($author->user_email, $subject, $message, $headers);
+
+        // Log del envío
+        if ($sent) {
+            SCL_Logger::log(
+                'notification_sent',
+                sprintf(
+                    /* translators: 1: email, 2: título de la promoción */
+                    __('Notificación de recepción de promoción enviada a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                    $author->user_email,
+                    $post->post_title
+                ),
+                $post_id,
+                'notification'
+            );
+        } else {
+            SCL_Logger::log(
+                'notification_failed',
+                sprintf(
+                    /* translators: 1: email, 2: título de la promoción */
+                    __('Error al enviar notificación de recepción de promoción a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                    $author->user_email,
+                    $post->post_title
+                ),
+                $post_id,
+                'notification'
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * Notificar al usuario que su promoción fue publicada
+     *
+     * @param int $post_id ID de la promoción.
+     */
+    public static function notify_user_promotion_published($post_id)
+    {
+        $post = get_post($post_id);
+
+        if (! $post || 'promocion' !== $post->post_type) {
+            return;
+        }
+
+        $author = get_userdata($post->post_author);
+
+        if (! $author) {
+            return;
+        }
+
+        $site_name = get_bloginfo('name');
+
+        // Obtener el establecimiento asociado
+        $establecimiento_id = get_post_meta($post_id, '_scl_establecimiento_id', true);
+        $establecimiento_nombre = '';
+        if ($establecimiento_id) {
+            $establecimiento = get_post($establecimiento_id);
+            if ($establecimiento) {
+                $establecimiento_nombre = $establecimiento->post_title;
+            }
+        }
+
+        // Asunto del correo
+        $subject = sprintf(
+            /* translators: 1: nombre del sitio, 2: nombre de la promoción */
+            __('[%1$s] Tu promoción ha sido publicada: %2$s', 'simple-cards-listings'),
+            $site_name,
+            $post->post_title
+        );
+
+        // Cuerpo del correo
+        $message = sprintf(
+            /* translators: %s: nombre del usuario */
+            __('Hola %s,', 'simple-cards-listings'),
+            $author->display_name
+        ) . "\n\n";
+
+        $message .= sprintf(
+            /* translators: %s: nombre de la promoción */
+            __('Tu promoción "%s" ha sido aprobada y publicada exitosamente.', 'simple-cards-listings'),
+            $post->post_title
+        ) . "\n\n";
+
+        if ($establecimiento_nombre) {
+            $message .= sprintf(
+                /* translators: %s: nombre del establecimiento */
+                __('Establecimiento: %s', 'simple-cards-listings'),
+                $establecimiento_nombre
+            ) . "\n\n";
+        }
+
+        $message .= __('Tu promoción ya es visible en el directorio.', 'simple-cards-listings') . "\n";
+        $message .= self::get_promotion_url($post_id) . "\n\n";
+
+        $message .= "---\n";
+        $message .= sprintf(
+            /* translators: %s: nombre del sitio */
+            __('Este correo fue enviado automáticamente desde %s', 'simple-cards-listings'),
+            $site_name
+        );
+
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8',
+        );
+
+        $sent = wp_mail($author->user_email, $subject, $message, $headers);
+
+        // Log del envío
+        if ($sent) {
+            SCL_Logger::log(
+                'notification_sent',
+                sprintf(
+                    /* translators: 1: email, 2: título de la promoción */
+                    __('Notificación de publicación de promoción enviada a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                    $author->user_email,
+                    $post->post_title
+                ),
+                $post_id,
+                'notification'
+            );
+        } else {
+            SCL_Logger::log(
+                'notification_failed',
+                sprintf(
+                    /* translators: 1: email, 2: título de la promoción */
+                    __('Error al enviar notificación de publicación de promoción a %1$s sobre: "%2$s"', 'simple-cards-listings'),
+                    $author->user_email,
+                    $post->post_title
+                ),
+                $post_id,
+                'notification'
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * Obtener la URL del establecimiento según configuración
+     * 
+     * @param int $post_id ID del establecimiento
+     * @return string URL del establecimiento
+     */
+    private static function get_establishment_url($post_id)
+    {
+        $options = get_option('scl_options', array());
+        $directory_url = isset($options['directory_url']) ? trim($options['directory_url']) : '';
+
+        if (!empty($directory_url)) {
+            // Si hay URL configurada, usarla
+            return rtrim($directory_url, '/');
+        }
+
+        // Si no hay URL configurada, usar el permalink del post
+        return get_permalink($post_id);
+    }
+
+    /**
+     * Obtener la URL de la promoción según configuración
+     * 
+     * @param int $post_id ID de la promoción
+     * @return string URL de la promoción
+     */
+    private static function get_promotion_url($post_id)
+    {
+        $options = get_option('scl_options', array());
+        $promotions_url = isset($options['promotions_url']) ? trim($options['promotions_url']) : '';
+
+        if (!empty($promotions_url)) {
+            // Si hay URL configurada, usarla
+            return rtrim($promotions_url, '/');
+        }
+
+        // Si no hay URL configurada, usar el permalink del post
+        return get_permalink($post_id);
+    }
 }
 
 // Hook para notificar cambios de estado
 add_action('transition_post_status', function ($new_status, $old_status, $post) {
     if ('establecimiento' === $post->post_type) {
         SCL_Notifications::notify_status_change($post->ID, $new_status, $old_status);
+    }
+
+    // Notificar a usuarios cuando su promoción es aprobada
+    if ('promocion' === $post->post_type) {
+        // Solo notificar si cambió de otro estado a publicado
+        if ('publish' === $new_status && 'publish' !== $old_status) {
+            SCL_Notifications::notify_user_promotion_published($post->ID);
+        }
     }
 }, 10, 3);

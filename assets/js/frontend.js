@@ -1207,6 +1207,12 @@
       const $form = $("#scl-promocion-form");
       const $button = $("#scl-promo-submit");
       const $message = $("#scl-promo-form-message");
+
+      // Prevenir envíos duplicados
+      if ($button.prop("disabled")) {
+        return;
+      }
+
       const formData = new FormData($form[0]);
 
       formData.append("action", "scl_submit_cupon");
