@@ -55,6 +55,9 @@ class SCL_Ajax_Handlers
         add_action('wp_ajax_scl_submit_cupon', array(__CLASS__, 'submit_cupon'));
         add_action('wp_ajax_scl_delete_cupon', array(__CLASS__, 'delete_cupon'));
         add_action('wp_ajax_scl_get_promocion_meta', array(__CLASS__, 'get_promocion_meta'));
+
+        // CUPONES: Eliminación masiva de promociones vencidas
+        add_action('wp_ajax_scl_delete_expired_promotions', array(__CLASS__, 'delete_expired_promotions'));
     }
 
     /**
@@ -1323,13 +1326,29 @@ class SCL_Ajax_Handlers
             }
         }
 
-        // Query base - todas las promociones publicadas
+        // Query base - todas las promociones publicadas y activas (no expiradas)
+        $current_time = current_time('mysql');
         $args = array(
             'post_type' => 'promocion',
             'post_status' => 'publish',
             'posts_per_page' => -1,
             'orderby' => 'date',
             'order' => 'DESC',
+            'meta_query' => array(
+                'relation' => 'AND',
+                array(
+                    'key'     => '_scl_fecha_inicio',
+                    'value'   => $current_time,
+                    'compare' => '<=',
+                    'type'    => 'DATETIME',
+                ),
+                array(
+                    'key'     => '_scl_fecha_fin',
+                    'value'   => $current_time,
+                    'compare' => '>=',
+                    'type'    => 'DATETIME',
+                ),
+            ),
         );
 
         // Aplicar filtro de taxonomía
@@ -1386,12 +1405,14 @@ class SCL_Ajax_Handlers
                 $est_promo_args = $args;
                 unset($est_promo_args['s']);
                 $est_promo_args['fields'] = 'ids';
-                $est_promo_args['meta_query'] = array(
-                    array(
-                        'key' => '_scl_establecimiento_id',
-                        'value' => $est_query->posts,
-                        'compare' => 'IN',
-                    ),
+                // Mantener el meta_query existente (fechas) y agregar filtro de establecimiento
+                if (!isset($est_promo_args['meta_query'])) {
+                    $est_promo_args['meta_query'] = array('relation' => 'AND');
+                }
+                $est_promo_args['meta_query'][] = array(
+                    'key' => '_scl_establecimiento_id',
+                    'value' => $est_query->posts,
+                    'compare' => 'IN',
                 );
                 $est_promo_query = new WP_Query($est_promo_args);
                 $matching_ids = array_merge($matching_ids, $est_promo_query->posts);
@@ -1619,5 +1640,51 @@ class SCL_Ajax_Handlers
         }
 
         wp_send_json_success(array('message' => __('Cupón eliminado exitosamente.', 'simple-cards-listings')));
+    }
+
+    /**
+     * CUPONES: Eliminar promociones vencidas masivamente
+     */
+    public static function delete_expired_promotions()
+    {
+        // Verificar nonce
+        check_ajax_referer('scl_delete_expired_promotions', 'nonce');
+
+        // Verificar permisos - solo administradores o usuarios con capacidad de eliminar posts de otros
+        if (!current_user_can('delete_others_posts')) {
+            wp_send_json_error(array('message' => __('No tienes permisos para realizar esta acción.', 'simple-cards-listings')));
+        }
+
+        // Eliminar promociones vencidas
+        $deleted_count = SCL_Cupones::delete_expired_promotions();
+
+        if ($deleted_count === 0) {
+            wp_send_json_error(array('message' => __('No se encontraron promociones vencidas para eliminar.', 'simple-cards-listings')));
+        }
+
+        // Log de la acción masiva
+        if (class_exists('SCL_Logger')) {
+            SCL_Logger::log(
+                'bulk_delete_expired_promotions',
+                sprintf(__('Eliminación masiva de %d promociones vencidas', 'simple-cards-listings'), $deleted_count),
+                array(
+                    'deleted_count' => $deleted_count,
+                    'user_id' => get_current_user_id(),
+                )
+            );
+        }
+
+        wp_send_json_success(array(
+            'message' => sprintf(
+                _n(
+                    'Se eliminó %d promoción vencida exitosamente.',
+                    'Se eliminaron %d promociones vencidas exitosamente.',
+                    $deleted_count,
+                    'simple-cards-listings'
+                ),
+                $deleted_count
+            ),
+            'deleted_count' => $deleted_count,
+        ));
     }
 }

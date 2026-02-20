@@ -1429,6 +1429,24 @@ class SCL_Shortcodes
             $args['tax_query'] = $tax_query;
         }
 
+        // Filtrar solo promociones activas (no expiradas)
+        $current_time = current_time('mysql');
+        $args['meta_query'] = array(
+            'relation' => 'AND',
+            array(
+                'key'     => '_scl_fecha_inicio',
+                'value'   => $current_time,
+                'compare' => '<=',
+                'type'    => 'DATETIME',
+            ),
+            array(
+                'key'     => '_scl_fecha_fin',
+                'value'   => $current_time,
+                'compare' => '>=',
+                'type'    => 'DATETIME',
+            ),
+        );
+
         // Obtener categorías hijas para el dropdown si hay categoria padre, si no, mostrar top-level
         if ($categoria_padre) {
             $categorias_dropdown = get_terms(array(

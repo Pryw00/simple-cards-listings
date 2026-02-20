@@ -35,6 +35,10 @@ class SCL_Cupones
 
         // Permisos
         add_filter('map_meta_cap', array(__CLASS__, 'map_promocion_meta_cap'), 10, 4);
+
+        // Eliminación masiva de promociones vencidas
+        add_action('admin_notices', array(__CLASS__, 'show_expired_promotions_notice'));
+        add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue_admin_scripts'));
     }
 
     /**
@@ -211,7 +215,7 @@ class SCL_Cupones
                 padding: 8px;
             }
         </style>
-<?php
+        <?php
     }
 
     /**
@@ -405,5 +409,202 @@ class SCL_Cupones
         $limite_edicion = $inicio_timestamp - ($dias_previos * DAY_IN_SECONDS);
 
         return $ahora <= $limite_edicion;
+    }
+
+    /**
+     * Mostrar aviso de promociones vencidas en el admin
+     */
+    public static function show_expired_promotions_notice()
+    {
+        $screen = get_current_screen();
+
+        // Solo mostrar en la página de promociones
+        if (!$screen || $screen->post_type !== 'promocion') {
+            return;
+        }
+
+        // Solo mostrar a usuarios con permisos
+        if (!current_user_can('delete_others_posts')) {
+            return;
+        }
+
+        // Contar promociones vencidas
+        $expired_count = self::count_expired_promotions();
+
+        if ($expired_count > 0) {
+        ?>
+            <div class="notice notice-warning is-dismissible" id="scl-expired-promotions-notice">
+                <p>
+                    <strong><?php _e('Promociones Vencidas:', 'simple-cards-listings'); ?></strong>
+                    <?php
+                    printf(
+                        _n(
+                            'Hay %d promoción vencida que puede ser eliminada.',
+                            'Hay %d promociones vencidas que pueden ser eliminadas.',
+                            $expired_count,
+                            'simple-cards-listings'
+                        ),
+                        $expired_count
+                    );
+                    ?>
+                    <button type="button" class="button button-primary" id="scl-delete-expired-promotions">
+                        <?php _e('Eliminar Promociones Vencidas', 'simple-cards-listings'); ?>
+                    </button>
+                    <span class="spinner" style="float: none; margin: 0 10px;"></span>
+                </p>
+            </div>
+<?php
+        }
+    }
+
+    /**
+     * Encolar scripts para la eliminación masiva
+     */
+    public static function enqueue_admin_scripts($hook)
+    {
+        $screen = get_current_screen();
+
+        // Solo cargar en la página de promociones
+        if (!$screen || $screen->post_type !== 'promocion') {
+            return;
+        }
+
+        wp_add_inline_script('jquery', "
+            jQuery(document).ready(function($) {
+                $('#scl-delete-expired-promotions').on('click', function(e) {
+                    e.preventDefault();
+                    
+                    var button = $(this);
+                    var spinner = button.siblings('.spinner');
+                    var notice = $('#scl-expired-promotions-notice');
+                    
+                    if (!confirm('" . esc_js(__('¿Estás seguro de que deseas eliminar todas las promociones vencidas? Esta acción no se puede deshacer.', 'simple-cards-listings')) . "')) {
+                        return;
+                    }
+                    
+                    button.prop('disabled', true);
+                    spinner.addClass('is-active');
+                    
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'scl_delete_expired_promotions',
+                            nonce: '" . wp_create_nonce('scl_delete_expired_promotions') . "'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                notice.removeClass('notice-warning').addClass('notice-success');
+                                notice.find('p').html('<strong>" . esc_js(__('¡Éxito!', 'simple-cards-listings')) . "</strong> ' + response.data.message);
+                                
+                                // Recargar la página después de 2 segundos
+                                setTimeout(function() {
+                                    location.reload();
+                                }, 2000);
+                            } else {
+                                notice.removeClass('notice-warning').addClass('notice-error');
+                                notice.find('p').html('<strong>" . esc_js(__('Error:', 'simple-cards-listings')) . "</strong> ' + response.data.message);
+                                button.prop('disabled', false);
+                                spinner.removeClass('is-active');
+                            }
+                        },
+                        error: function() {
+                            notice.removeClass('notice-warning').addClass('notice-error');
+                            notice.find('p').html('<strong>" . esc_js(__('Error:', 'simple-cards-listings')) . "</strong> " . esc_js(__('No se pudo conectar con el servidor.', 'simple-cards-listings')) . "');
+                            button.prop('disabled', false);
+                            spinner.removeClass('is-active');
+                        }
+                    });
+                });
+            });
+        ");
+    }
+
+    /**
+     * Contar promociones vencidas
+     * 
+     * @return int Número de promociones vencidas
+     */
+    public static function count_expired_promotions()
+    {
+        $current_time = current_time('mysql');
+
+        $args = array(
+            'post_type'      => 'promocion',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                array(
+                    'key'     => '_scl_fecha_fin',
+                    'value'   => $current_time,
+                    'compare' => '<',
+                    'type'    => 'DATETIME',
+                ),
+            ),
+        );
+
+        $query = new WP_Query($args);
+        return $query->found_posts;
+    }
+
+    /**
+     * Obtener IDs de promociones vencidas
+     * 
+     * @return array Array de IDs de promociones vencidas
+     */
+    public static function get_expired_promotion_ids()
+    {
+        $current_time = current_time('mysql');
+
+        $args = array(
+            'post_type'      => 'promocion',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                array(
+                    'key'     => '_scl_fecha_fin',
+                    'value'   => $current_time,
+                    'compare' => '<',
+                    'type'    => 'DATETIME',
+                ),
+            ),
+        );
+
+        $query = new WP_Query($args);
+        return $query->posts;
+    }
+
+    /**
+     * Eliminar promociones vencidas
+     * 
+     * @return int Número de promociones eliminadas
+     */
+    public static function delete_expired_promotions()
+    {
+        $expired_ids = self::get_expired_promotion_ids();
+        $deleted_count = 0;
+
+        foreach ($expired_ids as $post_id) {
+            // Usar wp_delete_post para eliminar permanentemente
+            if (wp_delete_post($post_id, true)) {
+                $deleted_count++;
+
+                // Log de la acción
+                if (class_exists('SCL_Logger')) {
+                    SCL_Logger::log(
+                        'promocion_deleted_expired',
+                        sprintf(__('Promoción vencida eliminada: %s (ID: %d)', 'simple-cards-listings'), get_the_title($post_id), $post_id),
+                        array(
+                            'promocion_id' => $post_id,
+                            'user_id' => get_current_user_id(),
+                        )
+                    );
+                }
+            }
+        }
+
+        return $deleted_count;
     }
 }
