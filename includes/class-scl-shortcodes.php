@@ -1271,7 +1271,7 @@ class SCL_Shortcodes
                     <div class="scl-modal-body">
                         <h3 id="scl-promocion-modal-titulo"><?php esc_html_e('Nueva Promoción', 'simple-cards-listings'); ?></h3>
                         <form id="scl-promocion-form" enctype="multipart/form-data">
-                            <input type="hidden" id="scl-promocion-id" name="promocion_id" value="">
+                            <input type="hidden" id="scl-promocion-id" name="cupon_id" value="">
 
                             <div class="scl-form-row">
                                 <label for="scl-promo-titulo"><?php esc_html_e('Título de la Promoción *', 'simple-cards-listings'); ?></label>

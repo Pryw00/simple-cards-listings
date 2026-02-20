@@ -1482,25 +1482,41 @@ class SCL_Ajax_Handlers
             }
         }
 
+        // Verificar si el usuario es administrador o autor para auto-aprobar (solo para nuevas)
+        $current_user = wp_get_current_user();
+        $auto_approve = current_user_can('manage_options') || SCL_Permissions::is_manager_role($current_user->ID);
+
         // Si es edición, validar permisos
         if ($cupon_id) {
             if (!SCL_Permissions::can_edit_promocion($cupon_id)) {
                 wp_send_json_error(array('message' => __('No puedes editar esta promoción.', 'simple-cards-listings')));
             }
 
+            // Cambiar estado a pending cuando se edita
             $post_data = array(
                 'ID' => $cupon_id,
                 'post_title' => $titulo,
                 'post_content' => $descripcion,
+                'post_status' => 'pending',
             );
 
             wp_update_post($post_data);
+            
+            // Log de la edición
+            SCL_Logger::log(
+                'promocion_edited',
+                sprintf('Promoción %d editada y cambiada a estado pendiente', $cupon_id),
+                $cupon_id,
+                'promocion'
+            );
+            
+            // Notificar al admin sobre la edición
+            SCL_Notifications::notify_new_promotion($cupon_id);
+            
+            // Notificar al usuario que su edición está en revisión
+            SCL_Notifications::notify_user_promotion_submission_received($cupon_id);
         } else {
             // Crear nueva promoción
-            // Verificar si el usuario es administrador o autor para auto-aprobar
-            $current_user = wp_get_current_user();
-            $auto_approve = current_user_can('manage_options') || SCL_Permissions::is_manager_role($current_user->ID);
-
             $post_data = array(
                 'post_type' => 'promocion',
                 'post_title' => $titulo,
