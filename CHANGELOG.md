@@ -5,6 +5,22 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.3.1] - 2026-09-25
+
+> Reconstruido a partir del historial de git. Este plugin quedó superado por el módulo `simple-cards-listings` de `ibarra-vive`.
+
+### Añadido
+
+- Eliminación masiva de promociones vencidas.
+- Validación de imágenes y notificaciones para solicitudes de establecimiento y promociones.
+
+### Cambiado
+
+- Al editar una promoción, pasa a estado pendiente y se notifica a los usuarios.
+- Mejora en la gestión de promociones activas y de términos de búsqueda.
+- La versión del código (antes 1.2.4) se alinea con este CHANGELOG.
+- `Plugin URI` y `Author URI` apuntan a GitHub en lugar de `example.com`.
+
 ## [1.3.0] - 2026-02-19
 
 ### Añadido

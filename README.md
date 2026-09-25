@@ -2,7 +2,7 @@
 
 Plugin de directorio de cartas de contacto de negocios para WordPress, desarrollado conforme a la especificación IEEE 830-1998.
 
-- **Versión actual:** 1.2.4 (ver `simple-cards-listings.php`)
+- **Versión actual:** 1.3.1 (ver `simple-cards-listings.php`)
 - **Text domain:** `simple-cards-listings`
 - **Repositorio:** https://github.com/Pryw00/simple-cards-listings
 
