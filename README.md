@@ -2,6 +2,12 @@
 
 Plugin de directorio de cartas de contacto de negocios para WordPress, desarrollado conforme a la especificación IEEE 830-1998.
 
+- **Versión actual:** 1.2.4 (ver `simple-cards-listings.php`)
+- **Text domain:** `simple-cards-listings`
+- **Repositorio:** https://github.com/Pryw00/simple-cards-listings
+
+> **Relación con Ibarra Vive:** este es el plugin **standalone**. Una versión evolucionada vive como módulo dentro del plugin unificado [`ibarra-vive`](https://github.com/Pryw00/ibarra-vive) (`modules/simple-cards-listings/`). No actives ambos a la vez.
+
 ## Descripción
 
 "Simple Cards Listings" es un plugin para WordPress que gestiona cartas de información de contacto de negocios y cupones promocionales, permitiendo a los usuarios buscar negocios según criterios específicos y descubrir ofertas especiales. Soporta tanto la administración desde el backend como la interacción avanzada con usuarios en el frontend.
@@ -48,6 +54,14 @@ Plugin de directorio de cartas de contacto de negocios para WordPress, desarroll
 - **Sistema de compartir**: URLs con auto-apertura de cupones
 
 ## Instalación
+
+### Desde un archivo ZIP
+
+1. Comprime la carpeta `simple-cards-listings` (sin `.git`) en `simple-cards-listings.zip`
+2. En WordPress ve a **Plugins > Añadir nuevo > Subir plugin**, selecciona el ZIP y actívalo
+3. Continúa con los pasos 3 y 4 de la instalación manual
+
+### Instalación manual
 
 1. Sube la carpeta `simple-cards-listings` al directorio `/wp-content/plugins/`
 2. Activa el plugin desde el menú "Plugins" en WordPress
@@ -187,7 +201,20 @@ El plugin dispara varios hooks para personalización:
 - Sanitización de todos los datos de entrada
 - Escape de todos los datos de salida
 
+## Desarrollo
+
+No hay proceso de compilación (PHP, CSS y JS planos). Para generar el paquete instalable:
+
+```bash
+# desde la carpeta padre
+zip -r simple-cards-listings.zip simple-cards-listings -x "simple-cards-listings/.git/*"
+```
+
+Ver también [INTEGRATION-ACCESS-CONTROL.md](INTEGRATION-ACCESS-CONTROL.md) para la integración con Administrador Avanzado de Roles.
+
 ## Changelog
+
+El historial detallado y más reciente está en [CHANGELOG.md](CHANGELOG.md). Resumen de versiones antiguas:
 
 ### 1.1.0 **[NUEVO]**
 
@@ -232,10 +259,14 @@ El plugin dispara varios hooks para personalización:
 
 GPL v2 o posterior
 
+## Repositorio
+
+https://github.com/Pryw00/simple-cards-listings
+
 ## Autor
 
-Tu Nombre o Empresa
+Wilson Yépez (PRYW) — [@Pryw00](https://github.com/Pryw00)
 
 ## Soporte
 
-Para reportar bugs o solicitar características, por favor abre un issue en el repositorio.
+Para reportar bugs o solicitar características, abre un issue en https://github.com/Pryw00/simple-cards-listings/issues

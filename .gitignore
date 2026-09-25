@@ -1,0 +1,39 @@
+# Sistema operativo
+desktop.ini
+Thumbs.db
+ehthumbs.db
+.DS_Store
+._*
+*.tmp
+*.bak
+*.swp
+*~
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.sublime-*
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Dependencias
+vendor/
+node_modules/
+
+# Builds / paquetes
+*.zip
+dist/
+build/
+
+# Logs
+*.log
+logs/
+error_log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+composer-debug.log
